@@ -1,20 +1,20 @@
 {
   "files": {
-    "main.css": "/mihaicira.github.io/planes-war/static/css/main.24fa5fc3.chunk.css",
-    "main.js": "/mihaicira.github.io/planes-war/static/js/main.7a852f1b.chunk.js",
-    "main.js.map": "/mihaicira.github.io/planes-war/static/js/main.7a852f1b.chunk.js.map",
-    "runtime-main.js": "/mihaicira.github.io/planes-war/static/js/runtime-main.f8a7fdc3.js",
-    "runtime-main.js.map": "/mihaicira.github.io/planes-war/static/js/runtime-main.f8a7fdc3.js.map",
-    "static/js/2.717cf5e2.chunk.js": "/mihaicira.github.io/planes-war/static/js/2.717cf5e2.chunk.js",
-    "static/js/2.717cf5e2.chunk.js.map": "/mihaicira.github.io/planes-war/static/js/2.717cf5e2.chunk.js.map",
-    "static/js/3.cc52305b.chunk.js": "/mihaicira.github.io/planes-war/static/js/3.cc52305b.chunk.js",
-    "static/js/3.cc52305b.chunk.js.map": "/mihaicira.github.io/planes-war/static/js/3.cc52305b.chunk.js.map",
-    "index.html": "/mihaicira.github.io/planes-war/index.html",
-    "static/css/main.24fa5fc3.chunk.css.map": "/mihaicira.github.io/planes-war/static/css/main.24fa5fc3.chunk.css.map",
-    "static/js/2.717cf5e2.chunk.js.LICENSE.txt": "/mihaicira.github.io/planes-war/static/js/2.717cf5e2.chunk.js.LICENSE.txt"
+    "main.css": "/planes-war/static/css/main.24fa5fc3.chunk.css",
+    "main.js": "/planes-war/static/js/main.7a852f1b.chunk.js",
+    "main.js.map": "/planes-war/static/js/main.7a852f1b.chunk.js.map",
+    "runtime-main.js": "/planes-war/static/js/runtime-main.87774ace.js",
+    "runtime-main.js.map": "/planes-war/static/js/runtime-main.87774ace.js.map",
+    "static/js/2.717cf5e2.chunk.js": "/planes-war/static/js/2.717cf5e2.chunk.js",
+    "static/js/2.717cf5e2.chunk.js.map": "/planes-war/static/js/2.717cf5e2.chunk.js.map",
+    "static/js/3.cc52305b.chunk.js": "/planes-war/static/js/3.cc52305b.chunk.js",
+    "static/js/3.cc52305b.chunk.js.map": "/planes-war/static/js/3.cc52305b.chunk.js.map",
+    "index.html": "/planes-war/index.html",
+    "static/css/main.24fa5fc3.chunk.css.map": "/planes-war/static/css/main.24fa5fc3.chunk.css.map",
+    "static/js/2.717cf5e2.chunk.js.LICENSE.txt": "/planes-war/static/js/2.717cf5e2.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/js/runtime-main.f8a7fdc3.js",
+    "static/js/runtime-main.87774ace.js",
     "static/js/2.717cf5e2.chunk.js",
     "static/css/main.24fa5fc3.chunk.css",
     "static/js/main.7a852f1b.chunk.js"
