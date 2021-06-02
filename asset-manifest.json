@@ -1,22 +1,22 @@
 {
   "files": {
-    "main.css": "/planes-war/static/css/main.c994f2db.chunk.css",
-    "main.js": "/planes-war/static/js/main.2a45a9db.chunk.js",
-    "main.js.map": "/planes-war/static/js/main.2a45a9db.chunk.js.map",
-    "runtime-main.js": "/planes-war/static/js/runtime-main.e02cf6b4.js",
-    "runtime-main.js.map": "/planes-war/static/js/runtime-main.e02cf6b4.js.map",
+    "main.css": "/planes-war/static/css/main.9e061713.chunk.css",
+    "main.js": "/planes-war/static/js/main.a681e4f3.chunk.js",
+    "main.js.map": "/planes-war/static/js/main.a681e4f3.chunk.js.map",
+    "runtime-main.js": "/planes-war/static/js/runtime-main.75fed14a.js",
+    "runtime-main.js.map": "/planes-war/static/js/runtime-main.75fed14a.js.map",
     "static/js/2.717cf5e2.chunk.js": "/planes-war/static/js/2.717cf5e2.chunk.js",
     "static/js/2.717cf5e2.chunk.js.map": "/planes-war/static/js/2.717cf5e2.chunk.js.map",
-    "static/js/3.de069b09.chunk.js": "/planes-war/static/js/3.de069b09.chunk.js",
-    "static/js/3.de069b09.chunk.js.map": "/planes-war/static/js/3.de069b09.chunk.js.map",
+    "static/js/3.1681ee8a.chunk.js": "/planes-war/static/js/3.1681ee8a.chunk.js",
+    "static/js/3.1681ee8a.chunk.js.map": "/planes-war/static/js/3.1681ee8a.chunk.js.map",
     "index.html": "/planes-war/index.html",
-    "static/css/main.c994f2db.chunk.css.map": "/planes-war/static/css/main.c994f2db.chunk.css.map",
+    "static/css/main.9e061713.chunk.css.map": "/planes-war/static/css/main.9e061713.chunk.css.map",
     "static/js/2.717cf5e2.chunk.js.LICENSE.txt": "/planes-war/static/js/2.717cf5e2.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/js/runtime-main.e02cf6b4.js",
+    "static/js/runtime-main.75fed14a.js",
     "static/js/2.717cf5e2.chunk.js",
-    "static/css/main.c994f2db.chunk.css",
-    "static/js/main.2a45a9db.chunk.js"
+    "static/css/main.9e061713.chunk.css",
+    "static/js/main.a681e4f3.chunk.js"
   ]
 }
