@@ -9,9 +9,9 @@ Array.prototype.frequencies = function() {
         result[this[l]] = result[this[l]] ? ++result[this[l]] : 1;
     }
     // all pairs (label, frequencies) to an array of arrays(2)
-    for (var l in result){
-        if (result.hasOwnProperty(l) && l !== 'all'){
-            result.all.push([ l,result[l] ]);
+    for (var r in result){
+        if (result.hasOwnProperty(r) && r !== 'all'){
+            result.all.push([ r,result[r] ]);
         }
     }
     return result;
@@ -82,7 +82,6 @@ class ConfigPage extends Component{
             this.setState(State)
             this.restartPlanes()
         }
-        console.log(this.state.fleet)
     }
 
     upperNumberOfAirplanes(){
@@ -94,7 +93,6 @@ class ConfigPage extends Component{
             this.setState(State)
             this.restartPlanes()
         }
-        console.log(this.state.fleet)
     }
 
     restartPlanes(){
@@ -297,7 +295,7 @@ class ConfigPage extends Component{
                     {/*{Configure the fleet}*/}
                     <div className="config">
                         <h3>Configure the fleet</h3>
-                        <p>You chose that each player will have {this.state.numberOfAirplanes} plane(s). It's the moment to configure your fleet, by chosing the size of each plane. Both players will have the same configurations. Choose wise!</p>
+                        <p>You chose that each player will have {this.state.numberOfAirplanes} plane(s). Configure your fleet by chosing the size of each plane. Both players will have the same configurations. Choose wise!</p>
                         <div className="config-content" id="configure-the-fleet-container">
                             {fleetTypes}
                         </div>
@@ -306,7 +304,7 @@ class ConfigPage extends Component{
                     {/*Modify the attacks*/}
                     <div className="config">
                         <h3>Plan your strikes</h3>
-                        <p>to be continued</p>
+                        <p>Having a powerful gear increases the chances of hitting your opponent. Each player uses his special gear whenever he wants to. Both players will have the same gear at the begginning of the game.</p>
                         <div className="config-content" id="plan-your-strikes-container">
                             <div className="plan-your-strikes-strike">
                                 <div className="plan-your-strikes-strike-atk">
@@ -394,7 +392,7 @@ class ConfigPage extends Component{
                     {/*Chat availability*/}
                     <div className="config">
                         <h3>Chat availability</h3>
-                        <p>to be continued</p>
+                        <p>Sometimes, socialization might be the missing piece. Choose whether you want or not to be able to chat with your opponent.</p>
                         <div className="config-content" id="chat-avilability-container">
                             <div id="chat-avilability-lever">
                                 <svg viewBox="0 0 129 123" fill="none" id="chat-availability-y-svg">
