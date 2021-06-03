@@ -1,6 +1,7 @@
 #configs-container{
     width: 90%;
     margin-top: 15vw;
+    margin-bottom: 5vh;
 
 
     margin-left: 50%;
@@ -163,7 +164,6 @@
 /***********************CONFIGURE THE FLEET******/
 
 #configure-the-fleet-container{
-    border: 1px solid red;
     width: 100%;
 
     display: flex;
@@ -171,11 +171,10 @@
     align-items: center;
     flex-direction: column;
 
-    gap: 5vw;
+    gap: 10vh;
 }
 
 .configure-the-fleet-plane{
-    border: 1px solid yellow;
     width: 100%;
 
     display: flex;
@@ -207,11 +206,29 @@
     display: flex;
     justify-content: center;
     align-items: center;
-
-    gap: 10px;
-
     flex-direction: column;
 }
+
+.configure-the-fleet-plane-buttons>p{
+    color: white;
+    background: var(--color1);
+    border: .2vw solid var(--color2);
+    border-radius: 1vh;
+
+    font-weight: bold;
+
+    width: 10vh;
+    text-align: center;
+
+    font-size: var(--fontsize1);
+
+    padding: .5vw 2.3vh .5vw 2.3vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .configure-the-fleet-plane-buttons>button{
     background: var(--color1);
     border: .2vw solid var(--color2);
@@ -231,4 +248,141 @@
 
 /***********************MODIFY THE ATTACKS******/
 
+#plan-your-strikes-container{
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+
+    gap: 10vh;
+}
+
+.plan-your-strikes-strike{
+    width: 90%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.plan-your-strikes-strike-atk{
+
+    width: 45%;
+}
+
+.plan-your-strikes-strike-atk p{
+    color: white;
+    text-align: center;
+}
+.plan-your-strikes-strike-atk hr{
+    border: none;
+    border-top: 2px solid var(--color1);
+}
+.plan-your-strikes-strike-atk-times{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1vh;
+}
+.plan-your-strikes-strike-atk-times>button{
+    background: var(--color1);
+    border: .2vw solid var(--color2);
+    border-radius: .5vw;
+    padding: 5px;
+    transition: 300ms;
+    -o-transition: 300ms;
+    -moz-transition: 300ms;
+    -webkit-transition: 300ms;
+
+    width: 40px;
+}
+
+.plan-your-strikes-strike-atk-times>button:hover,
+.plan-your-strikes-strike-atk-times>button:active,
+.plan-your-strikes-strike-atk-times>button:focus{
+    outline: none;
+    box-shadow: 0 0  3px 2px white;
+}
+
+.plan-your-strikes-strike-svg{
+    width: 15vw;
+}
+
 /***********************CHAT AVAILABILITY******/
+
+#chat-avilability-lever{
+    margin-top: 5vw;
+
+    margin-left: 50%;
+    transform: translateX(-50%);
+
+    width:90px;
+    height: 40px;
+
+    background: var(--color1);
+
+    border-radius: 50px;
+    border: 5px solid #414947;
+
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+
+    transition: 700ms;
+    -o-transition: 700ms;
+    -moz-transition: 700ms;
+    -webkit-transition: 700ms;
+}
+
+#chat-avilability-lever>svg{
+    width: 25%;
+    transition: 1000ms ease-in-out;
+    -o-transition: 1000ms ease-in-out-in;
+    -moz-transition: 1000ms ease-in-out;
+    -webkit-transition: 1000ms ease-in-out;
+}
+
+#chat-availability-x-svg{
+    opacity: 0;
+}
+
+#chat-avilability-lever>#ball{
+    position: absolute;
+    width: 33px;
+    height: 33px;
+
+    border-radius: 100%;
+
+    background: #E2E0E0;
+    border: 2px solid #414947;
+
+    transition: 700ms;
+    -o-transition: 700ms;
+    -moz-transition: 700ms;
+    -webkit-transition: 700ms;
+
+    transform: translateX(+60%);
+}
+
+/***********************SUMMARY******/
+
+.summary{
+    width: 100%;
+}
+
+.summary>h3{
+    padding-left: 4vw;
+    border-bottom: .2vw solid var(--color1);
+    color: var(--color1);
+    font-size: var(--fontsize1);
+}
+
+.summary>p{
+    text-align: center;
+    color: white;
+    margin: 0;
+    margin-top: 5px;
+    font-size: calc(var(--fontsize1) * .7);
+
+}
