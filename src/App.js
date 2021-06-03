@@ -10,7 +10,7 @@ class App extends Component{
   constructor() {
     super();
     this.state = {
-      activePage: 1
+      activePage: 2
     }
   }
 

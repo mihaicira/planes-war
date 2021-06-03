@@ -247,6 +247,7 @@ class ConfigPage extends Component{
                     {/*Canvas size*/}
                     <div className="config">
                         <h3>Canvas size</h3>
+                        <p>This the board where the game will be held. You can adjust it as you like by making it smaller or bigger. Keep in mind that the big the board is, the harder it will be for you to hit your opponent.</p>
                         <div className="config-content" id="config-canvas-size">
                             <div id="config-canvas-size-buttons">
                                 <button onClick={()=>{this.upperCanvasSize()}}>
@@ -270,6 +271,7 @@ class ConfigPage extends Component{
                     {/*Number of airplanes*/}
                     <div className="config">
                         <h3>Number of airplanes</h3>
+                        <p>Choose the total number of aircrafts for each player.</p>
                         <div className="config-content" id="config-number-of-airplanes">
                             <div id="config-number-of-airplanes-buttons">
                                 <button onClick={()=>{this.upperNumberOfAirplanes()}}>
@@ -295,6 +297,7 @@ class ConfigPage extends Component{
                     {/*{Configure the fleet}*/}
                     <div className="config">
                         <h3>Configure the fleet</h3>
+                        <p>You chose that each player will have {this.state.numberOfAirplanes} plane(s). It's the moment to configure your fleet, by chosing the size of each plane. Both players will have the same configurations. Choose wise!</p>
                         <div className="config-content" id="configure-the-fleet-container">
                             {fleetTypes}
                         </div>
