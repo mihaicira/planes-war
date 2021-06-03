@@ -247,7 +247,7 @@ class ConfigPage extends Component{
                     {/*Canvas size*/}
                     <div className="config">
                         <h3>Canvas size</h3>
-                        <p>This the board where the game will be held. You can adjust it as you like by making it smaller or bigger. Keep in mind that the big the board is, the harder it will be for you to hit your opponent.</p>
+                        <p>This is the board where the game will be held. You can adjust it as you like by making it smaller or bigger. Keep in mind that the bigger the board is, the harder it will be for you to hit your opponent.</p>
                         <div className="config-content" id="config-canvas-size">
                             <div id="config-canvas-size-buttons">
                                 <button onClick={()=>{this.upperCanvasSize()}}>
@@ -306,6 +306,7 @@ class ConfigPage extends Component{
                     {/*Modify the attacks*/}
                     <div className="config">
                         <h3>Plan your strikes</h3>
+                        <p>to be continued</p>
                         <div className="config-content" id="plan-your-strikes-container">
                             <div className="plan-your-strikes-strike">
                                 <div className="plan-your-strikes-strike-atk">
@@ -393,6 +394,7 @@ class ConfigPage extends Component{
                     {/*Chat availability*/}
                     <div className="config">
                         <h3>Chat availability</h3>
+                        <p>to be continued</p>
                         <div className="config-content" id="chat-avilability-container">
                             <div id="chat-avilability-lever">
                                 <svg viewBox="0 0 129 123" fill="none" id="chat-availability-y-svg">
