@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import MainPage from "./main-page/main-page";
 import ConfigPage from "./config-page/config-page";
+import GamePage from "./game-page/game-page";
 import "./App.css";
 import "./vars.css";
 
@@ -12,6 +13,21 @@ class App extends Component{
     this.state = {
       activePage: 1
     }
+  }
+
+  componentDidMount() {
+    const href = window.location.href
+    var State = this.state
+    if(href.includes("#gameroom")){
+      State.activePage = 3
+    }
+    else if(href.includes("#config")) {
+      State.activePage = 2
+    }
+    else {
+      State.activePage = 1
+    }
+    this.setState(State)
   }
 
   changePage = (id) =>{
@@ -42,12 +58,12 @@ class App extends Component{
 
       {
         this.state.activePage === 2 &&
-        <ConfigPage/>
+        <ConfigPage changePage={this.changePage}/>
       }
 
       {
         this.state.activePage === 3 &&
-        <MainPage/>
+        <GamePage/>
       }
       </>)
   }

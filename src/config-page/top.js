@@ -4,9 +4,15 @@ import './top.css'
 class Top extends Component{
     componentDidMount() {
         document.addEventListener("scroll",function(e){
-            var newViewBox = "0 "+window.scrollY/1.8+" 1440 713"
-            const svg = document.querySelector("#svg-window>svg")
-            svg.setAttribute("viewBox",newViewBox)
+            try{
+                var newViewBox = "0 "+window.scrollY/1.8+" 1440 713"
+                const svg = document.querySelector("#svg-window>svg")
+                svg.setAttribute("viewBox",newViewBox)
+            }
+            catch{
+                //page has been changed
+            }
+
         })
     }
 

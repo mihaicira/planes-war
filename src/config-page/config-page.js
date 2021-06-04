@@ -2,6 +2,8 @@ import React, {Component} from 'react';
 import Top from "./top";
 import './config-page.css';
 import BigButton from "../MutualComponents/BigButton";
+import firebase from "firebase/app";
+import "firebase/database";
 
 Array.prototype.frequencies = function() {
     var l = this.length, result = {all:[]};
@@ -16,6 +18,11 @@ Array.prototype.frequencies = function() {
     }
     return result;
 };
+
+function datify(date){
+    var dbDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()}-${date.getHours()}:${date.getMinutes()}:${date.getMilliseconds()}`
+    return dbDate;
+}
 
 class ConfigPage extends Component{
     constructor(props) {
@@ -49,6 +56,35 @@ class ConfigPage extends Component{
             }
             this.setState(State)
         })
+
+        datify(new Date())
+
+        // firebase.database().ref('rooms').set({
+        //     test:"Mihay"
+        // })
+    }
+
+    createRoom(state){
+        var Configs = {
+            config: state,
+            game: {
+                createdAt: datify(new Date())
+            },
+            chat: ""
+        }
+
+        // firebase.database().ref('rooms').push(Configs)
+        //     .then((snapshot)=>{
+        //         console.log(snapshot.key)
+        //         window.location = "#gameroom"+snapshot.key
+        //         this.props.changePage(3)
+        //     })
+
+        //development
+        window.location = "#gameroom-MbLk9Ls2KoQiqlsGr18"
+        this.props.changePage(3)
+
+
     }
 
     lowerCanvasSize(){
@@ -212,7 +248,7 @@ class ConfigPage extends Component{
 
         const summary = [
             <p key="summary-canvas">&ndash;&emsp;The canvas size is {this.state.canvasSize}x{this.state.canvasSize} ({this.state.canvasSize * this.state.canvasSize} spots).</p>,
-            <p key="summary-nrOfAirplanes">&ndash;&emsp;Each player has a fleet of {this.state.numberOfAirplanes} planes, as following:</p>
+            <p key="summary-nrOfAirplanes">&ndash;&emsp;Each player has a fleet of {this.state.numberOfAirplanes} plane(s), as following:</p>
         ]
         const smallPlanes = this.state.fleet.frequencies()[1]
         const mediumPlanes = this.state.fleet.frequencies()[2]
@@ -240,6 +276,8 @@ class ConfigPage extends Component{
             <section id="page-2">
 
                 <Top/>
+
+                <BigButton text="Create room" event={()=>{this.createRoom(this.state)}}/>
 
                 <div id="configs-container">
                     {/*Canvas size*/}
@@ -416,8 +454,7 @@ class ConfigPage extends Component{
                     </div>
                 </div>
 
-                <BigButton text="Create room" event={()=>{
-                    console.log("created")}}/>
+                <BigButton text="Create room" event={()=>{this.createRoom(this.state)}}/>
             </section>
         </>)
     }

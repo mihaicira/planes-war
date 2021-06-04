@@ -4,6 +4,26 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+import firebase from "firebase/app";
+import "firebase/database";
+import "firebase/analytics";
+
+var firebaseConfig = {
+    apiKey: "AIzaSyD5GgEtA6vyLAhYyHyc6epj--yYgf0UZw0",
+    authDomain: "planes-c7784.firebaseapp.com",
+    databaseURL: "https://planes-c7784-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "planes-c7784",
+    storageBucket: "planes-c7784.appspot.com",
+    messagingSenderId: "526831128634",
+    appId: "1:526831128634:web:ba3d88975c5301e349e503",
+    measurementId: "G-2L7VRNYPBY"
+};
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+firebase.analytics();
+
+
+
 ReactDOM.render(
   <React.StrictMode>
     <App />
