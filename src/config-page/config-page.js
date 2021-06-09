@@ -68,10 +68,12 @@ class ConfigPage extends Component{
         var Configs = {
             config: state,
             game: {
-                createdAt: datify(new Date())
+                createdAt: datify(new Date()),
+                gameStatus: 101
             },
             chat: ""
         }
+
 
         // firebase.database().ref('rooms').push(Configs)
         //     .then((snapshot)=>{
