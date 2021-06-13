@@ -4,7 +4,10 @@ import "firebase/database";
 
 import WaitingPage from "./waiting-page";
 import NotAvailable from "./not-available";
+import GameMenuButton from "./game-menu-button";
+import AreYouSure from "./are-you-sure";
 import './game.css';
+
 
 /*Game status
         * 101 - room created. No players joined yet.
@@ -32,7 +35,11 @@ class GamePage extends Component{
         this.state = {
             currentPage:1,
             toggleChat: true,
-            reactMessages: []
+            reactMessages: [],
+            planeSize:"small",
+            planeDirection: "T",
+            remainingFleet:"temporary",
+            areYouSure :false
         }
     }
 
@@ -60,6 +67,7 @@ class GamePage extends Component{
                         var State = this.state
                         State.currentPage = 3
                         this.setState(State)
+                        this.prepareSetupCanvas()
                         break;
                     default:
                         console.log("unknown case")
@@ -72,6 +80,9 @@ class GamePage extends Component{
         this.database.ref(`rooms/${this.roomId}/config`).once('value')
             .then((snapshot)=>{
                 this.roomConfig = snapshot.val()
+                var State = this.state
+                State.remainingFleet = snapshot.val().fleet
+                this.setState(State)
             })
     }
 
@@ -89,6 +100,7 @@ class GamePage extends Component{
                  var State = this.state
                  State.currentPage = 3
                  this.setState(State)
+                 this.prepareSetupCanvas();
              }
          })
     }
@@ -102,6 +114,7 @@ class GamePage extends Component{
                 var State = this.state
                 State.currentPage = 3
                 this.setState(State)
+                this.prepareSetupCanvas();
             })
 
         this.whoAmI = 2
@@ -143,6 +156,8 @@ class GamePage extends Component{
                     index = index  + 1
                 })
                 this.setState(State)
+
+                document.getElementById("game-chat-texting").scrollTop =  document.getElementById("game-chat-texting").scrollHeight
             }
 
         })
@@ -171,12 +186,375 @@ class GamePage extends Component{
         updates[`rooms/${this.roomId}/chat`] = this.messages
         this.database.ref().update(updates)
 
+        setTimeout(()=>{
+            document.getElementById("game-chat-texting").scrollTop =  document.getElementById("game-chat-texting").scrollHeight
+        },100)
+    }
+
+    simulatePlaneSquares(i,j,PLANE_SIZE,DIRECTION){
+        const plane = PLANE_SIZE+"-"+DIRECTION
+        var squares = []
+        switch(plane){
+            case "small-T":
+                squares = [
+                                         [i,j],
+                    [i+1,j-2],[i+1,j-1],[i+1,j],[i+1,j+1],[i+1,j+2],
+                                        [i+2,j],
+                              [i+3,j-1],[i+3,j],[i+3,j+1]
+                ]
+                break;
+            case "small-B":
+                squares = [
+                              [i-3,j-1],[i-3,j],[i-3,j+1],
+                                        [i-2,j],
+                    [i-1,j-2],[i-1,j-1],[i-1,j],[i-1,j+1],[i-1,j+2],
+                                        [i,j]
+                ]
+                break;
+            case "small-R":
+                squares = [
+                                        [i-2,j-1],
+                    [i-1,j-3],          [i-1,j-1],
+                    [i,j-3]  , [i,j-2] ,[i,j-1] , [i,j],
+                    [i+1,j-3]     ,     [i+1,j-1],
+                                        [i+2,j-1]
+                ]
+                break;
+            case "small-L":
+                squares = [
+                            [i-2,j+1],
+                            [i-1,j+1],      [i-1,j+3],
+                    [i,j]  ,[i,j+1], [i,j+2],[i,j+3],
+                            [i+1,j+1],       [i+1,j+3],
+                            [i+2,j+1]
+                    ]
+                break;
+            case "medium-T":
+                squares = [
+                                                 [i,j],
+                   [i+1,j-3],[i+1,j-2],[i+1,j-1],[i+1,j],[i+1,j+1],[i+1,j+2],[i+1,j+3],
+                                                [i+2,j],
+                                                [i+3,j],
+                                      [i+4,j-1],[i+4,j],[i+4,j+1]
+                ]
+                break;
+            case "medium-B":
+                squares = [
+                                       [i-4,j-1],[i-4,j],[i-4,j+1],
+                                                 [i-3,j],
+                                                 [i-2,j],
+                    [i-1,j-3],[i-1,j-2],[i-1,j-1],[i-1,j],[i-1,j+1],[i-1,j+2],[i-1,j+3],
+                                                  [i,j]
+                ]
+                break;
+            case "medium-R":
+                squares = [
+                                            [i-3,j-1],
+                                            [i-2,j-1],
+                    [i-1,j-4],              [i-1,j-1],
+                    [i,j-4],[i,j-3],[i,j-2],[i,j-1], [i,j],
+                    [i+1,j-4]  ,            [i+1,j-1],
+                                            [i+2,j-1],
+                                            [i+3,j-1]
+                ]
+                break;
+            case "medium-L":
+                squares = [
+                        [i-3,j+1],
+                        [i-2,j+1],
+                        [i-1,j+1],              [i-1,j+3],
+                    [i,j],[i,j+1],[i,j+2],[i,j+3],[i,j+3],
+                        [i+1,j+1],              [i+1,j+3],
+                        [i+2,j+1],
+                        [i+3,j+1]
+                ]
+                break;
+            case "big-T":
+                squares = [
+                                                             [i,j],
+                    [i+1,j-4],[i+1,j-3],[i+1,j-2],[i+1,j-1],[i+1,j],[i+1,j+1],[i+1,j+2],[i+1,j+3],[i+1,j+4],
+                                                            [i+2,j],
+                                                            [i+3,j],
+                                        [i+4,j-2],[i+4,j-1],[i+4,j],[i+4,j+1],[i+4,j+2]
+
+                ]
+                break;
+            case "big-B":
+                squares = [
+                                        [i-4,j-2],[i-4,j-1],[i-4,j],[i-4,j+1],[i-4,j+2],
+                                                            [i-3,j],
+                                                            [i-2,j],
+                    [i-1,j-4],[i-1,j-3],[i-1,j-2],[i-1,j-1],[i-1,j],[i-1,j+1],[i-1,j+2],[i-1,j+3],[i-1,j+4],
+                                                             [i,j]
+                ]
+                break;
+            case "big-R":
+                squares = [
+                                            [i-4,j-1],
+                                            [i-3,j-1],
+                    [i-2,j-4],              [i-2,j-1],
+                    [i-1,j-4],              [i-1,j-1],
+                    [i,j-4],[i,j-3],[i,j-2],[i,j-1], [i,j],
+                    [i+1,j-4],              [i+1,j-1],
+                    [i+2,j-4],              [i+2,j-1],
+                                            [i+3,j-1],
+                                            [i+4,j-1]
+                ]
+                break;
+            case "big-L":
+                squares =[
+                        [i-4,j+1],
+                        [i-3,j+1],
+                        [i-2,j+1],              [i-2,j+4],
+                        [i-1,j+1],              [i-1,j+4],
+                [i,j],  [i,j+1],[i,j+2],[i,j+3],[i,j+4],
+                        [i+1,j+1],              [i+1,j+4],
+                        [i+2,j+1],              [i+2,j+4],
+                        [i+3,j+1],
+                        [i+4,j+1]
+                ]
+                break;
+
+
+
+
+            default:
+                break;
+        }
+        return squares;
+    }
+
+    simulatePlane(squares){
+        var FAIL = false;
+        squares.forEach((pair)=>{
+            try{
+                document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "rgba(112, 202, 212,0.4)";
+            }
+            catch{
+                FAIL = true;
+            }
+        })
+        if(FAIL){
+            squares.forEach((pair)=>{
+                try{
+                    document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "#910C0C";
+                }
+                catch{
+                    //aia e...
+                }
+            })
+        }
+            // this.deleteSimulation(squares)
+    }
+
+    deleteSimulation(squares){
+        squares.forEach((pair)=>{
+            try{
+                document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "transparent";
+            }
+            catch{
+                //pass
+            }
+        })
+    }
+
+    prepareSetupCanvas(){
+        //pregateste tabla de pregatire, unde se aleg locurile avioanelor
+        console.log(this.roomConfig)
+        const CANVAS_SIZE = 100//this.roomConfig.canvasSize * this.roomConfig.canvasSize
+        document.getElementById("game-canvas-container").innerHTML = `<div class="game-canvas" id="setup-canvas">
+                <div class="canvas-letters"></div>
+                <div class="canvas-numbers"></div>
+            </div>`
+
+        document.querySelectorAll(".canvas-letters").forEach((obj)=>{
+            const letters = "ABCDEFGHIJKLMNOPRSTUVWXYZ"
+            for (let i = 0; i < 10; i++)
+                obj.insertAdjacentHTML('beforeend', `<p>${letters[i]}</p>`)
+        })
+
+        document.querySelectorAll(".canvas-numbers").forEach((obj)=>{
+            for (let i = 0; i < 10; i++)
+                obj.insertAdjacentHTML('beforeend', `<p>${i+1}</p>`)
+        })
+
+        for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+            for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++)
+            {
+                document.getElementById("setup-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="setup-square/${i}-${j}"></div>`)
+
+                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseover',()=>{
+                    //if canIPlaceItHere
+                    if(!this.state.areYouSure)
+                        this.simulatePlane(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
+                })
+                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseout',()=>{
+                    if(!this.state.areYouSure)
+                        this.deleteSimulation(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
+                })
+                document.getElementById(`setup-square/${i}-${j}`).addEventListener('click',()=>{
+                    if(!this.state.areYouSure)
+                        this.placePlane(i,j)
+                })
+            }
+    }
+
+    canIPlaceItHere(x,y){
+        //se verifica daca este posibila plasarea unui avion in pozitia X,Y. Dimensiunea si directia avionului sunt preluate (automat) din State.
+
+        const squares = this.simulatePlaneSquares(x,y,this.state.planeSize,this.state.planeDirection)
+        var FAIL = false
+
+        //OUT OF BOUNDS verification
+        squares.forEach((square)=>{
+            if(square[0] < 0 || square[1] < 0 || square[0] >= this.roomConfig.canvasSize || square[1] >= this.roomConfig.canvasSize)
+                FAIL = true;
+        })
+
+
+        return (FAIL? false:true)
+
+
+    }
+
+    confirmPlacePlane(){
+        //pass
+    }
+
+    raiseAreYouSure(){
+
+    }
+
+    placePlane(i,j){
+        //se apeleaza atunci cand se apasa pe un patrat din joc
+        if(this.canIPlaceItHere(i,j)){
+            const squares = this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection)
+            squares.forEach((square)=>{
+                document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background="green"
+            })
+
+
+
+            var State = this.state
+            State.areYouSure = true;
+            this.setState(State)
+        }
+        else{
+            console.log("nope")
+        }
+
+
+    }
+
+    menuRotateLeft(){
+         var State = this.state
+
+        switch(State.planeDirection){
+            case "T":
+                State.planeDirection = "L"
+                break;
+            case "B":
+                State.planeDirection = "R"
+                break;
+            case "R":
+                State.planeDirection = "T"
+                break;
+            case "L":
+                State.planeDirection = "B"
+                break;
+            default:
+                console.log("Error. Plane direction unkown: ",State.planeDirection)
+        }
+        document.querySelector("#menu-rotate-left>button>svg").style.transform = "scale(.8)";
+        document.querySelector("#menu-rotate-left>button>svg").style.boxShadow = "0 0 7px 3px white";
+         setTimeout(()=>{
+             document.querySelector("#menu-rotate-left>button>svg").style.transform = "scale(1)";
+             document.querySelector("#menu-rotate-left>button>svg").style.boxShadow = "0 0 0 0 transparent";
+         },300)
+
+        this.setState(State)
+    }
+
+    menuRotateRight(){
+        var State = this.state
+
+        switch(State.planeDirection){
+            case "T":
+                State.planeDirection = "R"
+                break;
+            case "B":
+                State.planeDirection = "L"
+                break;
+            case "R":
+                State.planeDirection = "B"
+                break;
+            case "L":
+                State.planeDirection = "T"
+                break;
+            default:
+                console.log("Error. Plane direction unkown: ",State.planeDirection)
+        }
+
+        document.querySelector("#menu-rotate-right>button>svg").style.transform = "scale(.8)";
+        document.querySelector("#menu-rotate-right>button>svg").style.boxShadow = "0 0 7px 3px white";
+        setTimeout(()=>{
+            document.querySelector("#menu-rotate-right>button>svg").style.transform = "scale(1)";
+            document.querySelector("#menu-rotate-right>button>svg").style.boxShadow = "0 0 0 0 transparent";
+        },300)
+
+        this.setState(State)
+    }
+
+    changePlaneSize(newSize){
+        document.querySelector("#menu-plane-1>button>svg:nth-of-type(2)").style.opacity="0";
+        document.querySelector("#menu-plane-2>button>svg:nth-of-type(2)").style.opacity="0";
+        document.querySelector("#menu-plane-3>button>svg:nth-of-type(2)").style.opacity="0";
+
+        var State = this.state
+
+        switch(newSize){
+            case "small":
+                document.querySelector("#menu-plane-1>button>svg:nth-of-type(2)").style.opacity="1";
+                State.planeSize = "small"
+                break;
+            case "medium":
+                document.querySelector("#menu-plane-2>button>svg:nth-of-type(2)").style.opacity="1";
+                State.planeSize = "medium"
+                break;
+            case "big":
+                document.querySelector("#menu-plane-3>button>svg:nth-of-type(2)").style.opacity="1";
+                State.planeSize = "big"
+                break;
+            default:
+                console.log("unknown size.")
+        }
+
+        this.setState(State)
+
     }
 
     componentDidMount() {
         this.getGameStatus();
         this.getRoomConfig();
         this.fetchMessages();
+
+        document.body.style.paddingBottom = "0";
+
+        setTimeout(()=>{
+            try{
+
+
+            }
+            catch{
+            //pass
+            }
+
+        },300)
+
+    }
+
+    componentWillUnmount() {
+        document.body.style.paddingBottom = "25vh";
     }
 
     render(){
@@ -206,6 +584,10 @@ class GamePage extends Component{
 
                                 <p>status</p>
 
+                               <AreYouSure text="You are about to set a plane on the selected spot."
+                               btn1Text="Proceed"
+                               btn2Text="Cancel"/>
+
                                 <svg viewBox="0 0 735 389" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M666.079 136.551C659.433 140.896 647.185 146.029 632.832 151.192C593.805 165.237 539.2 179.594 539.2 179.594C539.2 179.594 261.864 268.057 29.9118 229.579C29.9118 229.579 -4.62487 220.51 18.9661 192.189C22.6216 187.927 26.6457 183.996 30.9915 180.441L31.2605 180.011C33.8215 176.258 36.7133 172.741 39.9011 169.503C49.2463 159.881 65.8476 147.206 89.2884 145.83L666.523 107.857C666.523 107.857 690.8 120.357 666.079 136.551Z" fill="#3F3D56"/>
                                     <path d="M545.811 121.257L643.31 11.8081L696.701 8.88109L666.524 107.857C666.524 107.857 550.498 135.516 545.811 121.257Z" fill="#3F3D56"/>
@@ -217,7 +599,14 @@ class GamePage extends Component{
                                 </svg>
                             </div>
 
-                            <div id="game-canvas-container"></div>
+                            <div id="game-canvas-container">
+                                <div className="game-canvas" id="setup-canvas">
+                                    <div className="canvas-letters"></div>
+                                    <div className="canvas-numbers"></div>
+                                </div>
+                                {/*<div className="game-canvas" id="my-canvas"></div>*/}
+                                {/*<div className="game-canvas" id="enemy-canvas"></div>*/}
+                            </div>
 
                             <div id="game-footer">
                                 {
@@ -262,7 +651,33 @@ class GamePage extends Component{
                                         </button>
                                     </div>
                                 }
-                                <div className="footerObj"></div>
+
+                                <div className="footerObj" id="game-menu-container">
+                                    <div id="game-logs">
+                                        <p>The enemy set up a plane. He has 2 more plane(s) to set up.</p>
+                                        <p>The enemy set up a plane. He has 2 more plane(s) to set up.2</p>
+                                        <p>The enemy set up a plane. He has 2 more plane(s) to set up.3</p>
+                                    </div>
+                                    <div id="game-menu">
+                                        {
+                                            this.state.remainingFleet[0] > 0 &&
+                                            <GameMenuButton title="Small plane" info={this.state.remainingFleet[0] + " left"} icon="menu-plane-1" event={()=>{this.changePlaneSize("small")}}/>
+                                        }
+                                        {
+                                            this.state.remainingFleet[1] > 0 &&
+                                            <GameMenuButton title="Medium plane" info={this.state.remainingFleet[1] + " left"} icon="menu-plane-2" event={()=>{this.changePlaneSize("medium")}}/>
+                                        }
+                                        {
+                                            this.state.remainingFleet[2] > 0 &&
+                                            <GameMenuButton title="Big plane" info={this.state.remainingFleet[2] + " left"} icon="menu-plane-3" event={()=>{this.changePlaneSize("big")}}/>
+                                        }
+
+
+
+                                        <GameMenuButton title="" info="" icon="menu-rotate-right"  event={()=>{this.menuRotateRight()}}/>
+                                        <GameMenuButton title="" info="" icon="menu-rotate-left" event={()=>{this.menuRotateLeft()}}/>
+                                    </div>
+                                </div>
                                 <div className="footerObj"></div>
                             </div>
                         </div>
