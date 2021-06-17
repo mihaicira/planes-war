@@ -20,7 +20,7 @@ Array.prototype.frequencies = function() {
 };
 
 function datify(date){
-    var dbDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()}-${date.getHours()}:${date.getMinutes()}:${date.getMilliseconds()}`
+    var dbDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()}-${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}:${date.getMilliseconds()}`
     return dbDate;
 }
 
@@ -69,7 +69,9 @@ class ConfigPage extends Component{
             config: state,
             game: {
                 createdAt: datify(new Date()),
-                gameStatus: 101
+                gameStatus: 101,
+                logs: "",
+                planePositions:""
             },
             chat: ""
         }

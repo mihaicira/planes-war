@@ -23,6 +23,47 @@ import './game.css';
         *
 */
 
+function randomDegrees(){
+    //Returneaza o valoare intreaga intre [-90,+90]. Folosit pentru a genera gradele in patratelele din avioane
+    return (Math.floor(Math.random() * 180) - 90).toString();
+}
+
+function randomColor(){
+    //Returneaza o pereche de culori, folosita pentru a genera culorile din patratelele din avioane
+    var colors1 = [
+        "#d98c3f",
+        "#b0671e",
+        "#d16c06",
+        "#d4985b",
+        "#fc7f00",
+        "#a35507",
+        "#b5824e",
+        "#c49462"
+    ]
+    var colors2 = [
+        "#c6c90e",
+        "#dddeb3",
+        "#dee03f",
+        "#ebed64",
+        "#eef202",
+        "#c8ca76",
+        "#eef09c"
+    ]
+    // const idx = Math.floor(Math.random() * colors.length)
+    // const c1 = colors[idx];
+    // colors.splice(idx,1)
+    // const c2 = colors[Math.floor(Math.random() * colors.length)]
+
+    const c1 = colors1[Math.floor(Math.random() * colors1.length)]
+    const c2 = colors2[Math.floor(Math.random() * colors2.length)]
+    return [c1,c2]
+}
+
+function datify(date){
+    var dbDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()}-${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}:${date.getMilliseconds()}`
+    return dbDate;
+}
+
 class GamePage extends Component{
     roomId = window.location.hash.split("gameroom")[1];
     roomConfig = null
@@ -36,20 +77,51 @@ class GamePage extends Component{
             currentPage:1,
             toggleChat: true,
             reactMessages: [],
+            planePosition:[0,0],
             planeSize:"small",
             planeDirection: "T",
-            remainingFleet:"temporary",
-            areYouSure :false
+            remainingFleet:"temporary", //se populeaza cand se apeleaza getRoomConfig
+            areYouSure :false,
+            currentPlaneSquares:[], //pentru areYouSure - sa se tina minte patratelele colorate, ca sa se stie care trebuie recolorate
+            setupCanvas: [], //matrice CanvasSize x CanvasSize, pentru disponibilitate. Se populeaza cand se apeleaza getRoomConfig
+            setupPlanes: []
         }
     }
 
+    componentDidMount() {
+        this.getGameStatus();
+        this.getRoomConfig();
+        this.fetchMessages();
+
+        document.body.style.paddingBottom = "0";
+
+        setTimeout(()=>{
+            try{
+
+
+            }
+            catch{
+                //pass
+            }
+
+        },300)
+
+    }
+
+    componentWillUnmount() {
+        document.body.style.paddingBottom = "25vh";
+    }
+
+    /*PAGES*/
     raiseUnavailablePage(){
         //In situatiile in care nu se mai primesc jucatori,pagina "Unavailable" va aparea.
         var State = this.state
         State.currentPage = 2
         this.setState(State)
     }
+    /*PAGES*/
 
+    /*GAME SETUP*/
     getGameStatus(){
         //Cand componenta se incarca, se verifica statusul jocului, pentru a vedea daca se mai primesc jucatori sau nu
         this.database.ref(`rooms/${this.roomId}/game/gameStatus`).once('value')
@@ -80,9 +152,22 @@ class GamePage extends Component{
         this.database.ref(`rooms/${this.roomId}/config`).once('value')
             .then((snapshot)=>{
                 this.roomConfig = snapshot.val()
+
                 var State = this.state
+
                 State.remainingFleet = snapshot.val().fleet
+
+                //setupCanvas (disponibilitate)
+                for(let i = 0 ; i < snapshot.val().canvasSize ; i++){
+                    State.setupCanvas.push([])
+                    for(let j = 0 ; j < snapshot.val().canvasSize ; j++){
+                        State.setupCanvas[i].push(0)
+                    }
+                }
+
                 this.setState(State)
+
+                this.activateLogsListener();
             })
     }
 
@@ -119,7 +204,9 @@ class GamePage extends Component{
 
         this.whoAmI = 2
     }
+    /*GAME SETUP*/
 
+    /*CHAT*/
     toggleChat(){
         //Se schimba disponibilitatea chatului (din inchis in deschis si vice-versa)
         var State = this.state
@@ -139,7 +226,6 @@ class GamePage extends Component{
     fetchMessages(){
         this.database.ref(`rooms/${this.roomId}/chat`).on('value',(snapshot)=>{
             var Messages = snapshot.val()
-            console.log(Messages)
             if(Messages === "")
                 this.messages = []
             else{
@@ -159,10 +245,7 @@ class GamePage extends Component{
 
                 document.getElementById("game-chat-texting").scrollTop =  document.getElementById("game-chat-texting").scrollHeight
             }
-
         })
-
-
     }
 
     sendMessage(){
@@ -189,6 +272,51 @@ class GamePage extends Component{
         setTimeout(()=>{
             document.getElementById("game-chat-texting").scrollTop =  document.getElementById("game-chat-texting").scrollHeight
         },100)
+    }
+    /*CHAT*/
+
+    /*SETUP CANVAS*/
+    prepareSetupCanvas(){
+        //pregateste tabla de pregatire, unde se aleg locurile avioanelor
+        const CANVAS_SIZE = 100//this.roomConfig.canvasSize * this.roomConfig.canvasSize
+        document.getElementById("game-canvas-container").innerHTML = `<div class="game-canvas" id="setup-canvas">
+                <div class="canvas-letters"></div>
+                <div class="canvas-numbers"></div>
+            </div>`
+
+        document.querySelectorAll(".canvas-letters").forEach((obj)=>{
+            const letters = "ABCDEFGHIJKLMNOPRSTUVWXYZ"
+            for (let i = 0; i < 10; i++)
+                obj.insertAdjacentHTML('beforeend', `<p>${letters[i]}</p>`)
+        })
+
+        document.querySelectorAll(".canvas-numbers").forEach((obj)=>{
+            for (let i = 0; i < 10; i++)
+                obj.insertAdjacentHTML('beforeend', `<p>${i+1}</p>`)
+        })
+
+        for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+            for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++)
+            {
+                document.getElementById("setup-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="setup-square/${i}-${j}"></div>`)
+
+                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseover',()=>{
+                    //if canIPlaceItHere
+                    if(!this.state.areYouSure){
+                        this.simulatePlane(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
+                    }
+                })
+                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseout',()=>{
+                    if(!this.state.areYouSure ){
+                        this.deleteSimulation(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
+                    }
+
+                })
+                document.getElementById(`setup-square/${i}-${j}`).addEventListener('click',()=>{
+                    if(!this.state.areYouSure)
+                        this.placePlane(i,j)
+                })
+            }
     }
 
     simulatePlaneSquares(i,j,PLANE_SIZE,DIRECTION){
@@ -314,10 +442,6 @@ class GamePage extends Component{
                         [i+4,j+1]
                 ]
                 break;
-
-
-
-
             default:
                 break;
         }
@@ -328,16 +452,23 @@ class GamePage extends Component{
         var FAIL = false;
         squares.forEach((pair)=>{
             try{
-                document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "rgba(112, 202, 212,0.4)";
+                var Square = document.getElementById(`setup-square/${pair[0]}-${pair[1]}`)
+                if(this.state.setupCanvas[pair[0]][pair[1]] === 0)
+                    Square.style.background = "rgba(112, 202, 212,0.4)";
+
+                if(Square === null || this.state.setupCanvas[pair[0]][pair[1]] === 1)
+                    throw "err";
             }
             catch{
                 FAIL = true;
+                return;
             }
         })
         if(FAIL){
             squares.forEach((pair)=>{
                 try{
-                    document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "#910C0C";
+                    if(this.state.setupCanvas[pair[0]][pair[1]] === 0)
+                        document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "#910C0C";
                 }
                 catch{
                     //aia e...
@@ -350,53 +481,13 @@ class GamePage extends Component{
     deleteSimulation(squares){
         squares.forEach((pair)=>{
             try{
-                document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "transparent";
+                if(this.state.setupCanvas[pair[0]][pair[1]] === 0)
+                    document.getElementById(`setup-square/${pair[0]}-${pair[1]}`).style.background = "transparent";
             }
             catch{
                 //pass
             }
         })
-    }
-
-    prepareSetupCanvas(){
-        //pregateste tabla de pregatire, unde se aleg locurile avioanelor
-        console.log(this.roomConfig)
-        const CANVAS_SIZE = 100//this.roomConfig.canvasSize * this.roomConfig.canvasSize
-        document.getElementById("game-canvas-container").innerHTML = `<div class="game-canvas" id="setup-canvas">
-                <div class="canvas-letters"></div>
-                <div class="canvas-numbers"></div>
-            </div>`
-
-        document.querySelectorAll(".canvas-letters").forEach((obj)=>{
-            const letters = "ABCDEFGHIJKLMNOPRSTUVWXYZ"
-            for (let i = 0; i < 10; i++)
-                obj.insertAdjacentHTML('beforeend', `<p>${letters[i]}</p>`)
-        })
-
-        document.querySelectorAll(".canvas-numbers").forEach((obj)=>{
-            for (let i = 0; i < 10; i++)
-                obj.insertAdjacentHTML('beforeend', `<p>${i+1}</p>`)
-        })
-
-        for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
-            for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++)
-            {
-                document.getElementById("setup-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="setup-square/${i}-${j}"></div>`)
-
-                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseover',()=>{
-                    //if canIPlaceItHere
-                    if(!this.state.areYouSure)
-                        this.simulatePlane(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
-                })
-                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseout',()=>{
-                    if(!this.state.areYouSure)
-                        this.deleteSimulation(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
-                })
-                document.getElementById(`setup-square/${i}-${j}`).addEventListener('click',()=>{
-                    if(!this.state.areYouSure)
-                        this.placePlane(i,j)
-                })
-            }
     }
 
     canIPlaceItHere(x,y){
@@ -407,9 +498,24 @@ class GamePage extends Component{
 
         //OUT OF BOUNDS verification
         squares.forEach((square)=>{
-            if(square[0] < 0 || square[1] < 0 || square[0] >= this.roomConfig.canvasSize || square[1] >= this.roomConfig.canvasSize)
+            if(square[0] < 0 || square[1] < 0 || square[0] >= this.roomConfig.canvasSize || square[1] >= this.roomConfig.canvasSize){
                 FAIL = true;
+            }
+
+
         })
+
+        //OVERLAP verification
+        var State = this.state
+        if(!FAIL){
+            squares.forEach((square)=>{
+                    if(State.setupCanvas[square[0]][square[1]] > 0){
+                        FAIL = true;
+                        return;
+                    }
+            })
+        }
+
 
 
         return (FAIL? false:true)
@@ -418,10 +524,81 @@ class GamePage extends Component{
     }
 
     confirmPlacePlane(){
-        //pass
+        var State = this.state
+        const squares = this.simulatePlaneSquares(State.planePosition[0],State.planePosition[1],State.planeSize,State.planeDirection)
+
+        const randomDegree = randomDegrees()
+        const colors = randomColor()
+        squares.forEach((square)=>{
+            State.setupCanvas[square[0]][square[1]] += 1
+            document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background = "linear-gradient("+randomDegree+"deg,"+colors[0]+" 0% 30%,"+colors[1]+" 70%)";
+        })
+
+        this.setState(State)
+
+        this.closeAreYouSure(true)
+
+        const plane = {
+            x:State.planePosition[0],
+            y:State.planePosition[1],
+            size:State.planeSize,
+            direction: State.planeDirection
+        }
+
+        const remainingFleet = this.state.remainingFleet
+
+        const log = {
+            type: "plane-set",
+            log:[this.whoAmI,(remainingFleet[0] + remainingFleet[1] + remainingFleet[2])]
+        }
+
+
+        //send log
+        var updates = {}
+        this.database.ref(`rooms/${this.roomId}/game/logs`).once('value')
+            .then((snapshot)=>{
+                var logs = snapshot.val() === "" ? [] : snapshot.val()
+                logs.push(log)
+
+                updates[`rooms/${this.roomId}/game/logs`] = logs;
+                this.database.ref().update(updates);
+            })
+
+        //send plane info
+        updates = {}
+        this.database.ref(`rooms/${this.roomId}/game/planePositions`).once('value')
+            .then((snapshot)=>{
+                var positions = snapshot.val() === "" ? {player1:"",player2:""} : snapshot.val()
+                if(typeof positions["player"+this.whoAmI] === "string")
+                    positions["player"+this.whoAmI] = [plane]
+                else
+                    positions["player"+this.whoAmI].push(plane)
+
+                updates[`rooms/${this.roomId}/game/planePositions`] = positions;
+                this.database.ref().update(updates);
+            })
+    }
+
+    closeAreYouSure(proceed=false){
+        document.getElementById("areYouSure").style.opacity = "0";
+        document.getElementById("areYouSure").style.transform = "translateX(-50%) rotateX(90deg)"
+
+        var State = this.state
+        if(!proceed)
+        State.currentPlaneSquares.forEach((square)=>{
+            document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background="transparent";
+        })
+
+
+        State.areYouSure = false
+        State.currentPlaneSquares = []
+        this.setState(State)
     }
 
     raiseAreYouSure(){
+
+        document.getElementById("areYouSure").style.opacity = "1";
+        document.getElementById("areYouSure").style.transform = "translateX(-50%) rotateX(0deg)"
 
     }
 
@@ -430,14 +607,17 @@ class GamePage extends Component{
         if(this.canIPlaceItHere(i,j)){
             const squares = this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection)
             squares.forEach((square)=>{
-                document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background="green"
+                document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background="#79bdb0"
             })
-
-
 
             var State = this.state
             State.areYouSure = true;
+            State.planePosition[0] = i;
+            State.planePosition[1] = j;
+            State.currentPlaneSquares = this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection)
             this.setState(State)
+
+            this.raiseAreYouSure()
         }
         else{
             console.log("nope")
@@ -532,29 +712,68 @@ class GamePage extends Component{
         this.setState(State)
 
     }
+    /*SETUP CANVAS*/
 
-    componentDidMount() {
-        this.getGameStatus();
-        this.getRoomConfig();
-        this.fetchMessages();
-
-        document.body.style.paddingBottom = "0";
-
-        setTimeout(()=>{
-            try{
+    /*LOGS*/
+    activateLogsListener(){
+        this.database.ref(`rooms/${this.roomId}/game/logs`).on('value',(snapshot)=> {
+            const logs = snapshot.val()
+            const gameLogs = document.getElementById("game-logs")
 
 
+            if(typeof logs !== "string")
+            {
+                const  log = logs[logs.length-1]
+                switch (log.type) {
+                    case "plane-set":
+                        var message = `${log.log[0] === this.whoAmI ? "You " : "The enemy "} set up a plane. ${log.log[0] === this.whoAmI ? "You have" : "He has"} ${log.log[1]} more plane(s) to set up.`;
+                        var id = "log"+datify(new Date()).split("-")[1].replaceAll(":","")
+                        gameLogs.insertAdjacentHTML('beforeend',`<p id="${id}">${message}</p>`)
+                        var HtmlLog = document.getElementById(id);
+                        setTimeout(()=>{
+                            HtmlLog.style.transform = "translateY(0)";
+                        },100)
+                        setTimeout(()=>{
+                            HtmlLog.style.transform = "translateY(-150%)"
+                            HtmlLog.style.opacity = "0";
+                            setTimeout(()=>{
+                                HtmlLog.remove()
+                            },1100)
+                        },8000)
+                        break;
+                    default:
+                        console.log("Log type unknown:", log.type)
+
+
+                }
             }
-            catch{
-            //pass
-            }
 
-        },300)
-
+        })
     }
+    /*LOGS*/
 
-    componentWillUnmount() {
-        document.body.style.paddingBottom = "25vh";
+    /*AUX*/
+    refreshDb(){
+
+        var updates = {}
+
+        updates[`rooms/${this.roomId}`] = {
+            chat:"",
+            config:{
+                attacks: [0,1],
+                canvasSize: 10,
+                chat: true,
+                fleet:[1,1,1],
+                numberOfAirplanes: 3
+            },
+            game:{
+                createdAt: "4/5/2021-14:20:148",
+                gameStatus: 101,
+                logs: "",
+                planePositions:"",
+            }
+        };
+        this.database.ref().update(updates);
     }
 
     render(){
@@ -586,7 +805,9 @@ class GamePage extends Component{
 
                                <AreYouSure text="You are about to set a plane on the selected spot."
                                btn1Text="Proceed"
-                               btn2Text="Cancel"/>
+                               btn1Event={()=>{this.confirmPlacePlane()}}
+                               btn2Text="Cancel"
+                               btn2Event={()=>{this.closeAreYouSure()}}/>
 
                                 <svg viewBox="0 0 735 389" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M666.079 136.551C659.433 140.896 647.185 146.029 632.832 151.192C593.805 165.237 539.2 179.594 539.2 179.594C539.2 179.594 261.864 268.057 29.9118 229.579C29.9118 229.579 -4.62487 220.51 18.9661 192.189C22.6216 187.927 26.6457 183.996 30.9915 180.441L31.2605 180.011C33.8215 176.258 36.7133 172.741 39.9011 169.503C49.2463 159.881 65.8476 147.206 89.2884 145.83L666.523 107.857C666.523 107.857 690.8 120.357 666.079 136.551Z" fill="#3F3D56"/>
@@ -654,9 +875,6 @@ class GamePage extends Component{
 
                                 <div className="footerObj" id="game-menu-container">
                                     <div id="game-logs">
-                                        <p>The enemy set up a plane. He has 2 more plane(s) to set up.</p>
-                                        <p>The enemy set up a plane. He has 2 more plane(s) to set up.2</p>
-                                        <p>The enemy set up a plane. He has 2 more plane(s) to set up.3</p>
                                     </div>
                                     <div id="game-menu">
                                         {
@@ -678,7 +896,9 @@ class GamePage extends Component{
                                         <GameMenuButton title="" info="" icon="menu-rotate-left" event={()=>{this.menuRotateLeft()}}/>
                                     </div>
                                 </div>
-                                <div className="footerObj"></div>
+                                <div className="footerObj">
+                                    <button onClick={()=>{this.refreshDb()}}>REFRESH DATABASE</button>
+                                </div>
                             </div>
                         </div>
                 }
