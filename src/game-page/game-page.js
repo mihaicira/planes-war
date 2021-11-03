@@ -64,6 +64,15 @@ function datify(date){
     return dbDate;
 }
 
+const UIStatusList = [
+    "Set up your fleet",
+    "Wait for the enemy",
+    "The game will begin shortly",
+    "Strike your enemy!",
+    "It's your enemy's turn"
+]
+const LETTERS = "ABCDEFGHIJKLMNOPRSTUVWXYZ"
+
 class GamePage extends Component{
     roomId = window.location.hash.split("gameroom")[1];
     roomConfig = null
@@ -74,54 +83,111 @@ class GamePage extends Component{
     constructor(props) {
         super(props);
         this.state = {
-            currentPage:1,
-            toggleChat: true,
-            reactMessages: [],
-            planePosition:[0,0],
-            planeSize:"small",
-            planeDirection: "T",
+            currentPage:1, // 1 - waiting | 2 - unavailable | 3 - setup/game
+            gamePhase: 1, // 1 - setup | 2 - game
+            toggleChat: true, // daca este activ (sau nu) chatul
+            reactMessages: [], // pentru logs
+            planePosition:[0,0], // pozitia avionului curent selectat (pentru setup phase)
+            planeSize:"small", // dimensiunea avionului curent selectat (pentru setup phase)
+            planeDirection: "T", // directia avionului curent selectat (pentru setup phase)
             remainingFleet:"temporary", //se populeaza cand se apeleaza getRoomConfig
-            areYouSure :false,
+            remainingStrikes:"temporary",//se populeaza cand se apeleaza getRoomConfig
+            selectedStrike:"small", //dimensiunea loviturii curente (pentru game phase)
+            gameHasStarted: false, // false pentru mesajul "the game will start soon". True dupa ce incepe jocul.
+            areYouSure :false, // mesaj de confirmare pentru plasare avion (Setup canvas)
+            areYouSureText:"You are about to set a plane on the selected spot.",
+            areYouSurePhase:1,
             currentPlaneSquares:[], //pentru areYouSure - sa se tina minte patratelele colorate, ca sa se stie care trebuie recolorate
-            setupCanvas: [], //matrice CanvasSize x CanvasSize, pentru disponibilitate. Se populeaza cand se apeleaza getRoomConfig
-            setupPlanes: []
+            setupCanvas: [], //my canvas
+            enemyCanvas: [], //enemy canvas
+            isMyTurnNow:false, // true daca e randul jucatorului curent, false altfel
+            canIPlacePlane:true,
+            selectedStrikeSquares:[],
+            status: UIStatusList[0], //big on-screen status message
+            legend: true
         }
     }
+    /*canvas
+    * 0 - liber
+    * 1 - corp
+    * 2 - cap
+    * 3 - ratat
+    * 4 - corp lovit
+    * 5 - cap lovit
+    * */
 
     componentDidMount() {
-        this.getGameStatus();
-        this.getRoomConfig();
-        this.fetchMessages();
+        this.raiseSetupPage();
 
         document.body.style.paddingBottom = "0";
-
-        setTimeout(()=>{
-            try{
-
-
-            }
-            catch{
-                //pass
-            }
-
-        },300)
-
     }
 
     componentWillUnmount() {
         document.body.style.paddingBottom = "25vh";
     }
 
-    /*PAGES*/
+    //PAGES
     raiseUnavailablePage(){
         //In situatiile in care nu se mai primesc jucatori,pagina "Unavailable" va aparea.
         var State = this.state
         State.currentPage = 2
         this.setState(State)
     }
-    /*PAGES*/
 
-    /*GAME SETUP*/
+    raiseSetupPage(){
+        this.getGameStatus();
+        this.getRoomConfig();
+        this.fetchMessages();
+
+        this.database.ref(`rooms/${this.roomId}/game/planePositions`).on('value',(snapshot)=>{
+            if(this.roomConfig === null)
+                return;
+            if(snapshot.val()["player1"] === undefined || snapshot.val()["player2"] === undefined)
+                return;
+
+            if(snapshot.val()["player1"].length === this.roomConfig["numberOfAirplanes"])
+                if(snapshot.val()["player2"].length === this.roomConfig["numberOfAirplanes"]){
+                    this.updateUIStatus(UIStatusList[2])
+                    this.raiseGamePage()
+                }
+
+        })
+    }
+
+    raiseGamePage(){
+        document.querySelectorAll(".footerObj").forEach((obj)=>{
+            obj.style.opacity = "0";
+        })
+        setTimeout(()=>{
+            var State = this.state
+            State.gamePhase = 2;
+            this.setState(State)
+            this.preparePhaseTwoCanvas()
+
+            var otherPlayer = this.whoAmI == 1 ? 2 : 1
+            this.database.ref(`rooms/${this.roomId}/game/planePositions/player${otherPlayer}`).once('value')
+                .then((snapshot)=>{
+                    const enemyPlanes = snapshot.val()
+                    enemyPlanes.forEach((plane)=>{
+                        const squares = this.simulatePlaneSquares(plane.x,plane.y,plane.size,plane.direction)
+                        squares.forEach((square)=>{
+                            State.enemyCanvas[square[0]][square[1]] = 1
+                        })
+                        State.enemyCanvas[plane.x][plane.y] = 2
+                    })
+                })
+
+            setTimeout(()=>{
+                document.querySelectorAll(".footerObj").forEach((obj)=>{
+                    obj.style.opacity = "1";
+                })
+            },800)
+        },800)
+
+    }
+    //PAGES
+
+    //GAME
     getGameStatus(){
         //Cand componenta se incarca, se verifica statusul jocului, pentru a vedea daca se mai primesc jucatori sau nu
         this.database.ref(`rooms/${this.roomId}/game/gameStatus`).once('value')
@@ -134,12 +200,12 @@ class GamePage extends Component{
                         this.secondPlayerHasEntered()
                         break;
                     case 303:
-                        // this.raiseUnavailablePage()
+                        this.raiseUnavailablePage()
 
-                        var State = this.state
-                        State.currentPage = 3
-                        this.setState(State)
-                        this.prepareSetupCanvas()
+                        // var State = this.state
+                        // State.currentPage = 3
+                        // this.setState(State)
+                        // this.prepareSetupCanvas()
                         break;
                     default:
                         console.log("unknown case")
@@ -156,14 +222,18 @@ class GamePage extends Component{
                 var State = this.state
 
                 State.remainingFleet = snapshot.val().fleet
+                State.remainingStrikes = snapshot.val().attacks
 
                 //setupCanvas (disponibilitate)
                 for(let i = 0 ; i < snapshot.val().canvasSize ; i++){
                     State.setupCanvas.push([])
+                    State.enemyCanvas.push([])
                     for(let j = 0 ; j < snapshot.val().canvasSize ; j++){
                         State.setupCanvas[i].push(0)
+                        State.enemyCanvas[i].push(0)
                     }
                 }
+
 
                 this.setState(State)
 
@@ -176,6 +246,7 @@ class GamePage extends Component{
         var updates = {}
         updates[`rooms/${this.roomId}/game/gameStatus`] = 202
         this.database.ref().update(updates)
+
 
          this.whoAmI = 1
 
@@ -204,9 +275,25 @@ class GamePage extends Component{
 
         this.whoAmI = 2
     }
-    /*GAME SETUP*/
 
-    /*CHAT*/
+    updateUIStatus(status){
+        var State = this.state
+        var StatusHMTL =  document.querySelector("#game-header>p")
+
+        if(StatusHMTL){
+            StatusHMTL.style.transform="rotateX(90deg)";
+            setTimeout(()=>{
+                StatusHMTL.style.transform="rotateX(0deg)";
+
+                State.status = status
+                this.setState(State)
+            },350)
+        }
+
+    }
+    //GAME
+
+    //CHAT
     toggleChat(){
         //Se schimba disponibilitatea chatului (din inchis in deschis si vice-versa)
         var State = this.state
@@ -273,50 +360,57 @@ class GamePage extends Component{
             document.getElementById("game-chat-texting").scrollTop =  document.getElementById("game-chat-texting").scrollHeight
         },100)
     }
-    /*CHAT*/
+    //CHAT
 
-    /*SETUP CANVAS*/
+    //SETUP CANVAS
     prepareSetupCanvas(){
         //pregateste tabla de pregatire, unde se aleg locurile avioanelor
         const CANVAS_SIZE = 100//this.roomConfig.canvasSize * this.roomConfig.canvasSize
-        document.getElementById("game-canvas-container").innerHTML = `<div class="game-canvas" id="setup-canvas">
-                <div class="canvas-letters"></div>
-                <div class="canvas-numbers"></div>
-            </div>`
+        setTimeout(()=>{
+            // document.getElementById("game-canvas-container").innerHTML = `<div class="game-canvas" id="setup-canvas">
+            //     <div class="canvas-letters"></div>
+            //     <div class="canvas-numbers"></div>
+            // </div>`
 
-        document.querySelectorAll(".canvas-letters").forEach((obj)=>{
-            const letters = "ABCDEFGHIJKLMNOPRSTUVWXYZ"
-            for (let i = 0; i < 10; i++)
-                obj.insertAdjacentHTML('beforeend', `<p>${letters[i]}</p>`)
+            document.querySelectorAll(".canvas-letters").forEach((obj)=>{
+                const letters = LETTERS
+                for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+                    obj.insertAdjacentHTML('beforeend', `<p>${letters[i]}</p>`)
+            })
+
+            document.querySelectorAll(".canvas-numbers").forEach((obj)=>{
+                for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+                    obj.insertAdjacentHTML('beforeend', `<p>${i+1}</p>`)
+            })
+
+            for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+                for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++)
+                {
+                    document.getElementById("setup-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="setup-square/${i}-${j}"></div>`)
+
+                    document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseover',()=>{
+                        //if canIPlaceItHere
+                        if(!this.state.areYouSure && this.state.canIPlacePlane){
+                            this.simulatePlane(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
+                        }
+                    })
+                    document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseout',()=>{
+                        if(!this.state.areYouSure && this.state.canIPlacePlane){
+                            this.deleteSimulation(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
+                        }
+
+                    })
+                    document.getElementById(`setup-square/${i}-${j}`).addEventListener('click',()=>{
+                        if(!this.state.areYouSure && this.state.canIPlacePlane)
+                            this.placePlane(i,j)
+                    })
+                }
+        },500)
+
+        document.querySelectorAll(".footerObj").forEach((obj)=>{
+            obj.style.opacity = "1";
         })
 
-        document.querySelectorAll(".canvas-numbers").forEach((obj)=>{
-            for (let i = 0; i < 10; i++)
-                obj.insertAdjacentHTML('beforeend', `<p>${i+1}</p>`)
-        })
-
-        for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
-            for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++)
-            {
-                document.getElementById("setup-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="setup-square/${i}-${j}"></div>`)
-
-                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseover',()=>{
-                    //if canIPlaceItHere
-                    if(!this.state.areYouSure){
-                        this.simulatePlane(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
-                    }
-                })
-                document.getElementById(`setup-square/${i}-${j}`).addEventListener('mouseout',()=>{
-                    if(!this.state.areYouSure ){
-                        this.deleteSimulation(this.simulatePlaneSquares(i,j,this.state.planeSize,this.state.planeDirection))
-                    }
-
-                })
-                document.getElementById(`setup-square/${i}-${j}`).addEventListener('click',()=>{
-                    if(!this.state.areYouSure)
-                        this.placePlane(i,j)
-                })
-            }
     }
 
     simulatePlaneSquares(i,j,PLANE_SIZE,DIRECTION){
@@ -527,31 +621,61 @@ class GamePage extends Component{
         var State = this.state
         const squares = this.simulatePlaneSquares(State.planePosition[0],State.planePosition[1],State.planeSize,State.planeDirection)
 
+        //colorize the squares
         const randomDegree = randomDegrees()
         const colors = randomColor()
+
+
         squares.forEach((square)=>{
             State.setupCanvas[square[0]][square[1]] += 1
             document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background = "linear-gradient("+randomDegree+"deg,"+colors[0]+" 0% 30%,"+colors[1]+" 70%)";
         })
+        State.setupCanvas[State.planePosition[0]][State.planePosition[1]] = 2 // head
 
-        this.setState(State)
-
+        //close the confirm box
         this.closeAreYouSure(true)
 
+        //update the remaining fleet
+        var remainingFleet = this.state.remainingFleet
+        remainingFleet[0] = (State.planeSize === "small" ? remainingFleet[0]-1 : remainingFleet[0])
+        remainingFleet[1] = (State.planeSize === "medium" ? remainingFleet[1]-1 : remainingFleet[1])
+        remainingFleet[2] = (State.planeSize === "big" ? remainingFleet[2]-1 : remainingFleet[2])
+
+        //update the plane size selection button
+        var newPlaneSize;
+        if(remainingFleet[0] > 0)
+            newPlaneSize = "small"
+        else{
+            if(remainingFleet[1] > 0)
+                newPlaneSize = "medium"
+            else{
+                if(remainingFleet[2] > 0)
+                    newPlaneSize = "big"
+                else
+                    newPlaneSize = null
+            }
+        }
+        if(newPlaneSize)
+            setTimeout(()=>{this.changePlaneSize(newPlaneSize)},300)
+        else{
+            //pass
+        }
+
+        //prepare plane for DB
         const plane = {
             x:State.planePosition[0],
             y:State.planePosition[1],
             size:State.planeSize,
-            direction: State.planeDirection
+            direction: State.planeDirection,
+            degrees: randomDegree,
+            colors: colors
         }
 
-        const remainingFleet = this.state.remainingFleet
-
+        //prepare log for DB
         const log = {
             type: "plane-set",
             log:[this.whoAmI,(remainingFleet[0] + remainingFleet[1] + remainingFleet[2])]
         }
-
 
         //send log
         var updates = {}
@@ -577,29 +701,57 @@ class GamePage extends Component{
                 updates[`rooms/${this.roomId}/game/planePositions`] = positions;
                 this.database.ref().update(updates);
             })
+
+        //check if the last plane has been placed
+        if(remainingFleet[0] === 0 &&  remainingFleet[1] === 0 && remainingFleet[2] === 0){
+            State.canIPlacePlane = false;
+
+            this.database.ref(`rooms/${this.roomId}/game/planePositions`).once('value')
+                .then((snapshot)=>{
+                    const enemy = (this.whoAmI === 1) ? 2 : 1
+                    if(snapshot.val()["player"+enemy] === undefined || snapshot.val()["player"+enemy].length < this.roomConfig["numberOfAirplanes"])
+                        this.updateUIStatus(UIStatusList[1])
+                })
+        }
+
+        //update state
+        this.setState(State)
     }
 
-    closeAreYouSure(proceed=false){
+    closeAreYouSure(proceed=false,strikes=false){
         document.getElementById("areYouSure").style.opacity = "0";
         document.getElementById("areYouSure").style.transform = "translateX(-50%) rotateX(90deg)"
 
-        var State = this.state
-        if(!proceed)
-        State.currentPlaneSquares.forEach((square)=>{
-            document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background="transparent";
-        })
+        let State = this.state
 
+        if(!strikes){
+            if(!proceed)
+                State.currentPlaneSquares.forEach((square)=>{
+                    document.getElementById(`setup-square/${square[0]}-${square[1]}`).style.background="transparent";
+                })
 
-        State.areYouSure = false
-        State.currentPlaneSquares = []
+            State.areYouSure = false
+            State.currentPlaneSquares = []
+        }
+        if(strikes){
+            if(!proceed){
+                State.isMyTurnNow = true
+                State.selectedStrikeSquares.forEach((square)=>{
+                    if(document.getElementById(`enemy-canvas-square/${square[0]}-${square[1]}`))
+                        document.getElementById(`enemy-canvas-square/${square[0]}-${square[1]}`).innerHTML = this.getSquareSvg(square[0],square[1],false).svg
+                })
+            }
+            else{
+                State.isMyTurnNow = false
+                this.confirmStrike()
+            }
+        }
         this.setState(State)
     }
 
     raiseAreYouSure(){
-
         document.getElementById("areYouSure").style.opacity = "1";
         document.getElementById("areYouSure").style.transform = "translateX(-50%) rotateX(0deg)"
-
     }
 
     placePlane(i,j){
@@ -686,9 +838,14 @@ class GamePage extends Component{
     }
 
     changePlaneSize(newSize){
-        document.querySelector("#menu-plane-1>button>svg:nth-of-type(2)").style.opacity="0";
-        document.querySelector("#menu-plane-2>button>svg:nth-of-type(2)").style.opacity="0";
-        document.querySelector("#menu-plane-3>button>svg:nth-of-type(2)").style.opacity="0";
+        try{
+            document.querySelector("#menu-plane-1>button>svg:nth-of-type(2)").style.opacity = "0";
+            document.querySelector("#menu-plane-2>button>svg:nth-of-type(2)").style.opacity = "0";
+            document.querySelector("#menu-plane-3>button>svg:nth-of-type(2)").style.opacity = "0";
+        }
+        catch{
+            //pass
+        }
 
         var State = this.state
 
@@ -712,9 +869,322 @@ class GamePage extends Component{
         this.setState(State)
 
     }
-    /*SETUP CANVAS*/
+    //SETUP CANVAS
 
-    /*LOGS*/
+    //PHASE 2
+    preparePhaseTwoCanvas(){
+        const CANVAS_SIZE = 100
+        //letters
+        document.querySelectorAll(".canvas-letters").forEach((obj)=>{
+            const letters = LETTERS
+            for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+                obj.insertAdjacentHTML('beforeend', `<p>${letters[i]}</p>`)
+        })
+
+        //numbers
+        document.querySelectorAll(".canvas-numbers").forEach((obj)=>{
+            for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+                obj.insertAdjacentHTML('beforeend', `<p>${i+1}</p>`)
+        })
+
+        //listeners
+        for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+            for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++)
+            {
+                document.getElementById("my-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="my-canvas-square/${i}-${j}"></div>`)
+                document.getElementById("enemy-canvas").insertAdjacentHTML('beforeend', `<div class="game-canvas-square" id="enemy-canvas-square/${i}-${j}"></div>`)
+            }
+
+        for (let i = 0; i < Math.sqrt(CANVAS_SIZE); i++)
+            for(let j = 0 ; j < Math.sqrt(CANVAS_SIZE) ; j++){
+                document.getElementById(`enemy-canvas-square/${i}-${j}`).addEventListener("click",()=>{
+                    if(this.state.gameHasStarted && this.state.isMyTurnNow)
+                        this.simulateStrike(this.getStrikeSquares(i,j,this.state.selectedStrike))
+                })
+                // document.getElementById(`enemy-canvas-square/${i}-${j}`).addEventListener("mouseenter",()=>{
+                //     if(this.state.gameHasStarted && this.state.isMyTurnNow)
+                //         this.simulateStrike(this.getStrikeSquares(i,j,this.state.selectedStrike))
+                // })
+                // document.getElementById(`enemy-canvas-square/${i}-${j}`).addEventListener("mouseleave",()=>{
+                //     if(this.state.gameHasStarted && this.state.isMyTurnNow)
+                //         this.deleteSimulateStrike(this.getStrikeSquares(i,j,this.state.selectedStrike))
+                // })
+            }
+
+        //fill 1 canvas with planes
+        this.populateMyCanvas()
+    }
+
+    populateMyCanvas(){
+    //    fills the player's canvas with his planes
+    //     const CANVAS_SIZE = this.roomConfig.canvasSize
+
+        this.database.ref(`rooms/${this.roomId}/game/planePositions/player${this.whoAmI}`).once('value')
+            .then((snapshot)=>{
+                const planes = snapshot.val()
+                planes.forEach((plane)=>{
+
+                    const planeSquares = this.simulatePlaneSquares(plane.x,plane.y,plane.size,plane.direction)
+
+                    planeSquares.forEach((square)=>{
+                        document.getElementById(`my-canvas-square/${square[0]}-${square[1]}`).style.background = "linear-gradient("+plane.degrees+"deg,"+plane.colors[0]+" 0% 30%,"+plane.colors[1]+" 70%)";                    })
+
+                })
+            })
+
+        setTimeout(()=>{
+            this.beginGame()
+        },500)
+    }
+
+    beginGame(){
+        let State = this.state
+        State.gameHasStarted = true;
+
+        this.database.ref(`rooms/${this.roomId}/game/currentTurn`).on('value',(snapshot)=>{
+            let State = this.state
+            State.isMyTurnNow = (snapshot.val() == this.whoAmI ? true : false)
+            if(State.isMyTurnNow){
+                this.updateUIStatus(UIStatusList[3])
+            }
+            else{
+                this.updateUIStatus(UIStatusList[4])
+            }
+            this.setState(State)
+        })
+
+        this.database.ref(`rooms/${this.roomId}/game/strikesHistory`).on('value',(snapshot)=>{
+            let State = this.state
+            let DBStrikes = snapshot.val()
+            if(!DBStrikes) return;
+            DBStrikes.forEach((strikePackage)=>{
+                if(strikePackage.from !== this.whoAmI)
+                    strikePackage.strikes.forEach((strike)=>{
+                        if(State.setupCanvas[strike[0]][strike[1]] !== this.rules(State.setupCanvas[strike[0]][strike[1]])){
+                            console.log("update on my canvas square: ",strike)
+                            State.setupCanvas[strike[0]][strike[1]] = this.rules(State.setupCanvas[strike[0]][strike[1]])
+                            document.getElementById(`my-canvas-square/${strike[0]}-${strike[1]}`).innerHTML = this.getSquareSvg(strike[0],strike[1],true).svg
+                        }
+                    })
+            })
+        })
+
+
+        this.setState(State)
+    }
+
+    changeStrikeSize(newSize){
+        if(document.querySelector("#menu-small-strike>button>svg:nth-of-type(2)"))
+            document.querySelector("#menu-small-strike>button>svg:nth-of-type(2)").style.opacity = "0";
+
+        if(document.querySelector("#menu-medium-strike>button>svg:nth-of-type(2)"))
+            document.querySelector("#menu-medium-strike>button>svg:nth-of-type(2)").style.opacity = "0";
+
+        if(document.querySelector("#menu-big-strike>button>svg:nth-of-type(2)"))
+            document.querySelector("#menu-big-strike>button>svg:nth-of-type(2)").style.opacity = "0";
+
+        var State = this.state
+
+        switch(newSize){
+            case "small":
+                document.querySelector("#menu-small-strike>button>svg:nth-of-type(2)").style.opacity="1";
+                State.selectedStrike = "small"
+                break;
+            case "medium":
+                document.querySelector("#menu-medium-strike>button>svg:nth-of-type(2)").style.opacity="1";
+                State.selectedStrike = "medium"
+                break;
+            case "big":
+                document.querySelector("#menu-big-strike>button>svg:nth-of-type(2)").style.opacity="1";
+                State.selectedStrike = "big"
+                break;
+            default:
+                console.log("unknown size.")
+        }
+
+        this.setState(State)
+
+    }
+
+    getStrikeSquares(i,j,size){
+        var arrayOfSquares = []
+        switch(size){
+            case "small":
+                arrayOfSquares.push([i,j])
+                break;
+            case "medium":
+                arrayOfSquares.push([i,j])
+                arrayOfSquares.push([i+1,j+1])
+                arrayOfSquares.push([i+1,j])
+                arrayOfSquares.push([i,j+1])
+                break;
+            case "big":
+                arrayOfSquares.push([i-1,j-1])
+                arrayOfSquares.push([i-1,j])
+                arrayOfSquares.push([i-1,j+1])
+                arrayOfSquares.push([i,j-1])
+                arrayOfSquares.push([i,j])
+                arrayOfSquares.push([i,j+1])
+                arrayOfSquares.push([i+1,j-1])
+                arrayOfSquares.push([i+1,j])
+                arrayOfSquares.push([i+1,j+1])
+                break;
+            default:
+                console.log("unknown strike size")
+                break;
+        }
+        return arrayOfSquares
+    }
+
+    getSquareSvg(x,y,myCanvas){
+        let canvas = myCanvas === true ? this.state.setupCanvas : this.state.enemyCanvas
+        let squareId = canvas[x][y]
+        let envelope = {
+            id: squareId,
+            svg: "none"
+        }
+        switch(squareId){
+            case 0:
+                envelope.svg= ""
+                break;
+            case 1:
+                envelope.svg =  ""
+                break;
+            case 2:
+                envelope.svg = ""
+                break;
+            case 3:
+                envelope.svg =  `<svg width="6" height="6" viewBox="0 0 6 6" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="3" fill="#CCED70"/></svg>`;
+                break;
+            case 4:
+                envelope.svg =  `<svg width="19" height="24" viewBox="0 0 19 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 22L10 14.5M17 7L10 14.5M10 14.5L3 7L17 22" stroke="#BE2D19" stroke-width="2"/></svg>`
+                break;
+            case 5:
+                envelope.svg =  `<svg  viewBox="0 0 40 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.1241 23.5027V27.8066H23.247H26.0051V23.5027L26.6719 23.3512L27.8237 22.5328L29.2785 21.1992L30.6728 19.411L31.3699 17.8046L31.6123 15.3798L31.3699 13.3188L30.2181 10.8637L28.3086 8.95426L26.0051 7.56003L23.4288 6.62044L21.6406 6.34766H19.5796L17.0336 6.86291L14.336 7.89343L12.2144 9.40889L10.4868 11.5002L9.57749 13.5613L9.39563 16.0163L9.78965 18.1683L10.7595 20.1384L12.3659 21.8054L14.0026 22.9268L15.1241 23.5027Z" stroke="#680606" stroke-width="2"/><path d="M6.18268 8.43851L10.0623 12.5L11.305 10.4389L7.78907 7.07459L7.91031 6.98366L8.36495 6.55933L8.63773 5.89253L8.81959 4.98325L8.63773 4.19521L8.1831 3.43748L6.8798 3.04346L5.75835 3.28593L5.03093 4.04366L4.81876 4.68016V5.58944L4.24289 5.37727L3.06083 5.58944L2.18186 6.55933L2 7.92325L2.57588 9.01439L4.39443 9.59026L5.87959 9.13562L6.18268 8.43851Z" stroke="#680606" stroke-width="2"/><path d="M34.3381 7.56941L30.6362 11.7934L29.3063 9.78758L32.6747 6.27561L32.5497 6.18996L32.0773 5.78552L31.7762 5.13102L31.5555 4.23037L31.7034 3.43526L32.1251 2.65873L33.4103 2.2092L34.5411 2.40337L35.3004 3.12923L35.5396 3.75604L35.5786 4.66448L36.1449 4.42782L37.3349 4.58912L38.2547 5.52044L38.4948 6.87531L37.9663 7.99013L36.1741 8.64344L34.6708 8.25289L34.3381 7.56941Z" stroke="#680606" stroke-width="2"/><path d="M17.4576 26.4429V27.6552H19.4277M19.4277 27.6552V26.4429M19.4277 27.6552H21.3372M21.3372 27.6552V26.4429M21.3372 27.6552H23.277V26.4429" stroke="#680606"/><circle cx="16.2757" cy="18.1978" r="2.54598" fill="#680606"/><circle cx="24.7623" cy="18.3805" r="2.54598" fill="#680606"/><path d="M20.3977 20.8052L22.5501 24.5332H18.2453L20.3977 20.8052Z" fill="#680606"/><path d="M6.12203 27.5634L12.1233 21.4409L13.8812 22.8048L7.6678 28.9576L7.97089 29.1395L8.54677 29.9275L8.78925 31.1702L8.54677 32.2916L7.78904 33.0797L6.91007 33.2009L5.84924 33.0797L4.97027 32.5644L4.66718 31.5036L4.81873 30.4428H3.87914L3.06079 30.2306L2.27275 29.3213L2.03027 28.1999L2.27275 27.2603C2.53543 27.0178 3.08504 26.5268 3.18203 26.5026C3.27902 26.4783 4.01048 26.3712 4.36409 26.3207L5.3946 26.8057L6.12203 27.5634Z" stroke="#680606" stroke-width="2"/><path d="M34.7643 27.9579L28.7631 21.8354L27.0051 23.1994L33.2186 29.3522L32.9155 29.534L32.3396 30.3221L32.0971 31.5647L32.3396 32.6862L33.0973 33.4742L33.9763 33.5955L35.0371 33.4742L35.9161 32.959L36.2192 31.8981L36.0676 30.8373H37.0072L37.8256 30.6251L38.6136 29.7159L38.8561 28.5944L38.6136 27.6548C38.3509 27.4124 37.8013 26.9213 37.7043 26.8971C37.6073 26.8729 36.8759 26.7658 36.5223 26.7152L35.4917 27.2002L34.7643 27.9579Z" stroke="#680606" stroke-width="2"/></svg>`
+                break;
+            default:
+                console.log("getSquareSvg error, unknown square id: ",squareId)
+                envelope.svg =  "err"
+                break;
+        }
+        console.log("envelope: ",envelope)
+        return envelope
+    }
+
+    simulateStrike(attacks){
+        let State = this.state
+        State.isMyTurnNow = false;
+        State.selectedStrikeSquares = attacks
+    //    attacks = array of striked squares
+        attacks.forEach((square)=>{
+            try{
+                document.getElementById(`enemy-canvas-square/${square[0]}-${square[1]}`).innerHTML =
+                    `<svg viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="4.5" stroke="#BE2D19"/><line x1="7.5" y1="16" x2="7.5" stroke="#BE2D19"/><line x1="8.5" y1="16" x2="8.5" stroke="#BE2D19"/><line x1="0.00137832" y1="7.5" x2="16.0013" y2="7.54411" stroke="#BE2D19"/><line x1="0.00137832" y1="8.5" x2="16.0013" y2="8.54411" stroke="#BE2D19"/></svg>`
+            }
+            catch{
+                //pass
+            }
+        })
+        State.areYouSureText = "You are about to strike the selected spot(s)."
+        State.areYouSurePhase=2
+        this.raiseAreYouSure();
+        this.setState(State)
+    }
+
+    rules(id){
+        if(id === 0) return 3; // lovit => lovit
+        if(id === 1) return 4;// corp => corp lovit
+        if(id === 2) return 5;// cap => cap lovit
+        if(id === 3) return 3;// ratat => ratat
+        if(id === 4) return 4;// corp lovit => corp lovit
+        if(id === 5) return 5;// cap lovit => cap lovit
+        return "err rules"
+    }
+
+    hitEnemy(squares){
+
+        let State = this.state
+        squares.forEach((square)=>{
+            let todel = State.enemyCanvas[square[0]][square[1]]
+            //change canvas id
+            State.enemyCanvas[square[0]][square[1]] = this.rules(State.enemyCanvas[square[0]][square[1]])
+            console.log(`Square ${square} changed from ${todel} to ${State.enemyCanvas[square[0]][square[1]]}`)
+
+            //change svg
+            document.getElementById(`enemy-canvas-square/${square[0]}-${square[1]}`).innerHTML = this.getSquareSvg(square[0],square[1],false).svg
+        })
+
+    }
+
+    confirmStrike(){
+        let updates = {}
+        updates[`rooms/${this.roomId}/game/currentTurn`] = this.whoAmI === 1 ? 2 : 1;
+        this.database.ref().update(updates);
+
+        let State = this.state
+
+
+        this.hitEnemy(State.selectedStrikeSquares)
+
+        let strike = {
+            from: this.whoAmI,
+            strikes: State.selectedStrikeSquares
+        }
+
+        this.database.ref(`rooms/${this.roomId}/game/strikesHistory`).once('value')
+            .then((snapshot)=>{
+                let strikes = snapshot.val() === null ? [] : snapshot.val()
+                strikes.push(strike)
+                let updates = {}
+                updates[`rooms/${this.roomId}/game/strikesHistory`] = strikes
+                this.database.ref().update(updates);
+            })
+
+        //prepare log
+        const log = {
+            type: "strike",
+            log:[this.whoAmI,State.selectedStrikeSquares]
+        }
+        //send log
+        updates = {}
+        this.database.ref(`rooms/${this.roomId}/game/logs`).once('value')
+            .then((snapshot)=>{
+                var logs = snapshot.val() === "" ? [] : snapshot.val()
+                logs.push(log)
+                updates[`rooms/${this.roomId}/game/logs`] = logs;
+                this.database.ref().update(updates);
+            })
+
+
+        this.setState(State)
+    }
+
+    deleteSimulateStrike(attacks){
+        console.log("lol im out")
+        var squares = []
+        attacks.forEach((square)=>{
+            try{
+                document.getElementById(`enemy-canvas-square/${square[0]}-${square[1]}`).innerHTML= "";
+                squares.push(square)
+
+            }
+            catch{
+                console.log("out of range",square)
+                //pass
+            }
+            console.log(1)
+
+        })
+
+        console.log(squares)
+    }
+    //PHASE 2
+
+    //LOGS
+    canvasPositionIfy(x,y){
+        return `[${x+1}-${LETTERS[y]}] `
+    }
+
     activateLogsListener(){
         this.database.ref(`rooms/${this.roomId}/game/logs`).on('value',(snapshot)=> {
             const logs = snapshot.val()
@@ -724,35 +1194,47 @@ class GamePage extends Component{
             if(typeof logs !== "string")
             {
                 const  log = logs[logs.length-1]
+                let id = ""
+                //prepare log
                 switch (log.type) {
                     case "plane-set":
                         var message = `${log.log[0] === this.whoAmI ? "You " : "The enemy "} set up a plane. ${log.log[0] === this.whoAmI ? "You have" : "He has"} ${log.log[1]} more plane(s) to set up.`;
-                        var id = "log"+datify(new Date()).split("-")[1].replaceAll(":","")
-                        gameLogs.insertAdjacentHTML('beforeend',`<p id="${id}">${message}</p>`)
-                        var HtmlLog = document.getElementById(id);
-                        setTimeout(()=>{
-                            HtmlLog.style.transform = "translateY(0)";
-                        },100)
-                        setTimeout(()=>{
-                            HtmlLog.style.transform = "translateY(-150%)"
-                            HtmlLog.style.opacity = "0";
-                            setTimeout(()=>{
-                                HtmlLog.remove()
-                            },1100)
-                        },8000)
+                        break;
+                    case "strike":
+                        let spots = ""
+                        log.log[1].forEach((eachLog)=>{spots = spots + this.canvasPositionIfy(eachLog[0],eachLog[1])})
+                        var message = `${log.log[0] === this.whoAmI ? "You " : "The enemy "} striked the following spot(s): ${spots}`
                         break;
                     default:
                         console.log("Log type unknown:", log.type)
-
-
                 }
+                //handle log..
+                id = "log"+datify(new Date()).split("-")[1].replaceAll(":","")
+                try{
+                    gameLogs.insertAdjacentHTML('beforeend',`<p id="${id}">${message}</p>`)
+                }
+                catch{
+                    return;
+                }
+                let HtmlLog = document.getElementById(id);
+                setTimeout(()=>{
+                    HtmlLog.style.transform = "translateY(0)";
+                },100)
+
+                setTimeout(()=>{
+                    HtmlLog.style.transform = "translateY(-150%)"
+                    HtmlLog.style.opacity = "0";
+                    setTimeout(()=>{
+                        HtmlLog.remove()
+                    },1100)
+                },8000)
             }
 
         })
     }
-    /*LOGS*/
+    //LOGS
 
-    /*AUX*/
+    //AUX
     refreshDb(){
 
         var updates = {}
@@ -760,14 +1242,16 @@ class GamePage extends Component{
         updates[`rooms/${this.roomId}`] = {
             chat:"",
             config:{
-                attacks: [0,1],
+                attacks: [1,1],
                 canvasSize: 10,
                 chat: true,
-                fleet:[1,1,1],
-                numberOfAirplanes: 3
+                fleet:[1,0,0],
+                numberOfAirplanes: 1
             },
             game:{
+                currentTurn: "1",
                 createdAt: "4/5/2021-14:20:148",
+                strikesHistory:[],
                 gameStatus: 101,
                 logs: "",
                 planePositions:"",
@@ -776,16 +1260,23 @@ class GamePage extends Component{
         this.database.ref().update(updates);
     }
 
+    //RENDER
     render(){
         return(<>
             <section id="page-3">
                 {
                     this.state.currentPage === 1 &&
+                    <>
                     <WaitingPage/>
+                    <button onClick={()=>{this.refreshDb()}}>REFRESH DATABASE</button>
+                    </>
                 }
                 {
                     this.state.currentPage === 2 &&
+                        <>
                     <NotAvailable/>
+                    <button onClick={()=>{this.refreshDb()}}>REFRESH DATABASE</button>
+                    </>
                 }
                 {
                     this.state.currentPage === 3 &&
@@ -801,13 +1292,16 @@ class GamePage extends Component{
                                     <path d="M151.498 314.905L217.311 333.709L433.642 250.496L473.801 235.044L493.307 227.534C467.776 193.493 330.023 200.666 330.023 200.666C327.068 202.185 325.482 205.475 324.712 209.335C323.276 216.564 324.712 225.768 325.316 229.099C325.457 229.914 325.56 230.352 325.56 230.352L151.498 314.905Z" fill="#3F3D56"/>
                                 </svg>
 
-                                <p>status</p>
+                                <p>{this.state.status}</p>
 
-                               <AreYouSure text="You are about to set a plane on the selected spot."
+                               <AreYouSure text={this.state.areYouSureText}
                                btn1Text="Proceed"
                                btn1Event={()=>{this.confirmPlacePlane()}}
+                               btn1Event2={()=>{this.closeAreYouSure(true,true)}}
                                btn2Text="Cancel"
-                               btn2Event={()=>{this.closeAreYouSure()}}/>
+                               btn2Event={()=>{this.closeAreYouSure()}}
+                               btn2Event2={()=>{this.closeAreYouSure(false,true)}}
+                               eventChoose={this.state.areYouSurePhase}/>
 
                                 <svg viewBox="0 0 735 389" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M666.079 136.551C659.433 140.896 647.185 146.029 632.832 151.192C593.805 165.237 539.2 179.594 539.2 179.594C539.2 179.594 261.864 268.057 29.9118 229.579C29.9118 229.579 -4.62487 220.51 18.9661 192.189C22.6216 187.927 26.6457 183.996 30.9915 180.441L31.2605 180.011C33.8215 176.258 36.7133 172.741 39.9011 169.503C49.2463 159.881 65.8476 147.206 89.2884 145.83L666.523 107.857C666.523 107.857 690.8 120.357 666.079 136.551Z" fill="#3F3D56"/>
@@ -821,12 +1315,52 @@ class GamePage extends Component{
                             </div>
 
                             <div id="game-canvas-container">
-                                <div className="game-canvas" id="setup-canvas">
-                                    <div className="canvas-letters"></div>
-                                    <div className="canvas-numbers"></div>
-                                </div>
-                                {/*<div className="game-canvas" id="my-canvas"></div>*/}
-                                {/*<div className="game-canvas" id="enemy-canvas"></div>*/}
+                                {
+                                    this.state.gamePhase === 1 &&
+                                    <div className="game-canvas" id="setup-canvas">
+                                        <div className="canvas-letters"></div>
+                                        <div className="canvas-numbers"></div>
+                                    </div>
+                                }
+                                {
+                                    this.state.gamePhase ===2 &&
+                                    <>
+                                    <div className="game-canvas" id="my-canvas">
+                                        <div className="canvas-letters"></div>
+                                        <div className="canvas-numbers"></div>
+                                    </div>
+
+                                    <div className="game-canvas" id="enemy-canvas">
+                                        <div className="canvas-letters"></div>
+                                        <div className="canvas-numbers"></div>
+                                    </div>
+
+                                        <div id="legend-container" className={this.state.legend === true ? "" : "legend-closed"} onClick={()=>{
+                                            let State = this.state
+                                            State.legend = !State.legend
+                                            this.setState(State)
+                                        }}>
+                                            <div><p>Legend</p></div>
+
+                                            <div>
+                                                <svg width="6" height="6" viewBox="0 0 6 6" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="3" fill="#CCED70"/></svg>
+                                                <p>Missed</p>
+                                            </div>
+
+                                            <div>
+                                                <svg width="19" height="24" viewBox="0 0 19 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 22L10 14.5M17 7L10 14.5M10 14.5L3 7L17 22" stroke="#BE2D19" strokeWidth="2"/></svg>
+                                                <p>Body hit</p>
+                                            </div>
+
+                                            <div>
+                                                <svg width="25" height="25" viewBox="0 0 40 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.1241 23.5027V27.8066H23.247H26.0051V23.5027L26.6719 23.3512L27.8237 22.5328L29.2785 21.1992L30.6728 19.411L31.3699 17.8046L31.6123 15.3798L31.3699 13.3188L30.2181 10.8637L28.3086 8.95426L26.0051 7.56003L23.4288 6.62044L21.6406 6.34766H19.5796L17.0336 6.86291L14.336 7.89343L12.2144 9.40889L10.4868 11.5002L9.57749 13.5613L9.39563 16.0163L9.78965 18.1683L10.7595 20.1384L12.3659 21.8054L14.0026 22.9268L15.1241 23.5027Z" stroke="#680606" strokeWidth="2"/><path d="M6.18268 8.43851L10.0623 12.5L11.305 10.4389L7.78907 7.07459L7.91031 6.98366L8.36495 6.55933L8.63773 5.89253L8.81959 4.98325L8.63773 4.19521L8.1831 3.43748L6.8798 3.04346L5.75835 3.28593L5.03093 4.04366L4.81876 4.68016V5.58944L4.24289 5.37727L3.06083 5.58944L2.18186 6.55933L2 7.92325L2.57588 9.01439L4.39443 9.59026L5.87959 9.13562L6.18268 8.43851Z" stroke="#680606" strokeWidth="2"/><path d="M34.3381 7.56941L30.6362 11.7934L29.3063 9.78758L32.6747 6.27561L32.5497 6.18996L32.0773 5.78552L31.7762 5.13102L31.5555 4.23037L31.7034 3.43526L32.1251 2.65873L33.4103 2.2092L34.5411 2.40337L35.3004 3.12923L35.5396 3.75604L35.5786 4.66448L36.1449 4.42782L37.3349 4.58912L38.2547 5.52044L38.4948 6.87531L37.9663 7.99013L36.1741 8.64344L34.6708 8.25289L34.3381 7.56941Z" stroke="#680606" strokeWidth="2"/><path d="M17.4576 26.4429V27.6552H19.4277M19.4277 27.6552V26.4429M19.4277 27.6552H21.3372M21.3372 27.6552V26.4429M21.3372 27.6552H23.277V26.4429" stroke="#680606"/><circle cx="16.2757" cy="18.1978" r="2.54598" fill="#680606"/><circle cx="24.7623" cy="18.3805" r="2.54598" fill="#680606"/><path d="M20.3977 20.8052L22.5501 24.5332H18.2453L20.3977 20.8052Z" fill="#680606"/><path d="M6.12203 27.5634L12.1233 21.4409L13.8812 22.8048L7.6678 28.9576L7.97089 29.1395L8.54677 29.9275L8.78925 31.1702L8.54677 32.2916L7.78904 33.0797L6.91007 33.2009L5.84924 33.0797L4.97027 32.5644L4.66718 31.5036L4.81873 30.4428H3.87914L3.06079 30.2306L2.27275 29.3213L2.03027 28.1999L2.27275 27.2603C2.53543 27.0178 3.08504 26.5268 3.18203 26.5026C3.27902 26.4783 4.01048 26.3712 4.36409 26.3207L5.3946 26.8057L6.12203 27.5634Z" stroke="#680606" strokeWidth="2"/><path d="M34.7643 27.9579L28.7631 21.8354L27.0051 23.1994L33.2186 29.3522L32.9155 29.534L32.3396 30.3221L32.0971 31.5647L32.3396 32.6862L33.0973 33.4742L33.9763 33.5955L35.0371 33.4742L35.9161 32.959L36.2192 31.8981L36.0676 30.8373H37.0072L37.8256 30.6251L38.6136 29.7159L38.8561 28.5944L38.6136 27.6548C38.3509 27.4124 37.8013 26.9213 37.7043 26.8971C37.6073 26.8729 36.8759 26.7658 36.5223 26.7152L35.4917 27.2002L34.7643 27.9579Z" stroke="#680606" strokeWidth="2"/></svg>
+                                                <p>Head hit (dead)</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                }
+
+
                             </div>
 
                             <div id="game-footer">
@@ -875,33 +1409,59 @@ class GamePage extends Component{
 
                                 <div className="footerObj" id="game-menu-container">
                                     <div id="game-logs">
+                                        <p id="invisibleLog">This is an invisible log. If you see this, you are probably cool.</p>
                                     </div>
                                     <div id="game-menu">
                                         {
-                                            this.state.remainingFleet[0] > 0 &&
-                                            <GameMenuButton title="Small plane" info={this.state.remainingFleet[0] + " left"} icon="menu-plane-1" event={()=>{this.changePlaneSize("small")}}/>
+                                            this.state.gamePhase === 1 &&
+                                                <>
+                                                    {
+                                                        this.state.remainingFleet[0] > 0 &&
+                                                        <GameMenuButton title="Small plane" info={this.state.remainingFleet[0] + " left"} icon="menu-plane-1" event={()=>{this.changePlaneSize("small")}}/>
+                                                    }
+                                                    {
+                                                        this.state.remainingFleet[1] > 0 &&
+                                                        <GameMenuButton title="Medium plane" info={this.state.remainingFleet[1] + " left"} icon="menu-plane-2" event={()=>{this.changePlaneSize("medium")}}/>
+                                                    }
+                                                    {
+                                                        this.state.remainingFleet[2] > 0 &&
+                                                        <GameMenuButton title="Big plane" info={this.state.remainingFleet[2] + " left"} icon="menu-plane-3" event={()=>{this.changePlaneSize("big")}}/>
+                                                    }
+                                                    <GameMenuButton title="" info="" icon="menu-rotate-right"  event={()=>{this.menuRotateRight()}}/>
+                                                    <GameMenuButton title="" info="" icon="menu-rotate-left" event={()=>{this.menuRotateLeft()}}/>
+                                                </>
                                         }
                                         {
-                                            this.state.remainingFleet[1] > 0 &&
-                                            <GameMenuButton title="Medium plane" info={this.state.remainingFleet[1] + " left"} icon="menu-plane-2" event={()=>{this.changePlaneSize("medium")}}/>
+                                            this.state.gamePhase === 2 &&
+                                                <>
+                                                    <GameMenuButton title="Small strike" info="&infin; left" icon="menu-small-strike" event={()=>{this.changeStrikeSize("small")}}/>
+                                                    {
+                                                        this.state.remainingStrikes[0] > 0 &&
+                                                        <GameMenuButton title="Medium strike" info={this.state.remainingStrikes[0] + " left"} icon="menu-medium-strike" event={()=>{this.changeStrikeSize("medium")}}/>
+                                                    }
+                                                    {
+                                                        this.state.remainingStrikes[1] > 0 &&
+                                                        <GameMenuButton title="Big strike" info={this.state.remainingStrikes[1] + " left"} icon="menu-big-strike" event={()=>{this.changeStrikeSize("big")}}/>
+                                                    }
+                                                </>
+
                                         }
-                                        {
-                                            this.state.remainingFleet[2] > 0 &&
-                                            <GameMenuButton title="Big plane" info={this.state.remainingFleet[2] + " left"} icon="menu-plane-3" event={()=>{this.changePlaneSize("big")}}/>
-                                        }
 
-
-
-                                        <GameMenuButton title="" info="" icon="menu-rotate-right"  event={()=>{this.menuRotateRight()}}/>
-                                        <GameMenuButton title="" info="" icon="menu-rotate-left" event={()=>{this.menuRotateLeft()}}/>
                                     </div>
                                 </div>
-                                <div className="footerObj">
-                                    <button onClick={()=>{this.refreshDb()}}>REFRESH DATABASE</button>
-                                </div>
+                                {
+                                    this.state.gamePhase === 2 &&
+                                    <div className="footerObj" >
+                                        <button onClick={()=>{this.refreshDb()}}>REFRESH DATABASE</button>
+                                    </div>
+                                }
+
+
                             </div>
                         </div>
+
                 }
+                <button onClick={()=>{this.refreshDb()}}>REFRESH DATABASE</button>
 
             </section>
             </>)

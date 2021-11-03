@@ -90,6 +90,68 @@ function GameMenuButton(props){
                         <path d="M85 62.8407C76.6667 43.3407 55.1 16.0407 35.5 62.8407" stroke="#1F4287" strokeWidth="5"/>
                         <path d="M46.5 58L35.5 63L32 53" stroke="#1F4287" strokeWidth="5"/>
                     </svg>
+                }
+
+                {
+                    props.icon==="menu-small-strike" &&
+                        <>
+                    <svg viewBox="0 0 143 143" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="71.5" cy="71.5" r="66" fill="#10FFE2" stroke="#278EA5" strokeWidth="11"/>
+                        <path d="M88 87L72 71M56 55L72 71M72 71L88 55L56 87" stroke="#A51C2D" strokeWidth="4"/>
+                        <rect opacity="0.85" x="46.5" y="46.5" width="49" height="49" stroke="#29312F" strokeWidth="3"/>
+                    </svg>
+                            <svg width="94" height="119" viewBox="0 0 94 119" fill="none" xmlns="http://www.w3.org/2000/svg"> <g filter="url(#filter0_d)"> <path d="M7.5 58.9999L32.5 98.9999C42.8333 62.1665 68.3 -7.60012 87.5 7.99988" stroke="#38AD67" strokeWidth="10"/> </g> <defs> <filter id="filter0_d" x="0.26001" y="0.76123" width="93.393" height="117.485" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB"> <feFlood floodOpacity="0" result="BackgroundImageFix"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/> <feOffset dy="4"/> <feGaussianBlur stdDeviation="1.5"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0"/> <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/> <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/> </filter> </defs> </svg>
+                    </>
+
+                }
+
+                {
+                    props.icon==="menu-medium-strike" &&
+                        <>
+                    <svg viewBox="0 0 143 143" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="71.5" cy="71.5" r="66" fill="#10FFE2" stroke="#278EA5" strokeWidth="11"/>
+                        <path d="M66.4615 65.8461L56.6154 56M46.7692 46.1538L56.6154 56M56.6154 56L66.4615 46.1538L46.7692 65.8461" stroke="#A51C2D" strokeWidth="3"/>
+                        <rect opacity="0.85" x="41.5" y="41.5" width="29" height="29" stroke="#29312F" strokeWidth="3"/>
+                        <path d="M96.6923 66.6923L86.8462 56.8462M77 47L86.8462 56.8462M86.8462 56.8462L96.6923 47L77 66.6923" stroke="#A51C2D" strokeWidth="3"/>
+                        <rect opacity="0.85" x="72.5" y="41.5" width="29" height="29" stroke="#29312F" strokeWidth="3"/>
+                        <path d="M66.4615 95.8461L56.6154 86M46.7692 76.1538L56.6154 86M56.6154 86L66.4615 76.1538L46.7692 95.8461" stroke="#A51C2D" strokeWidth="3"/>
+                        <rect opacity="0.85" x="41.5" y="71.5" width="29" height="29" stroke="#29312F" strokeWidth="3"/>
+                        <path d="M97.4615 95.8461L87.6154 86M77.7692 76.1538L87.6154 86M87.6154 86L97.4615 76.1538L77.7692 95.8461" stroke="#A51C2D" strokeWidth="3"/>
+                        <rect opacity="0.85" x="72.5" y="71.5" width="29" height="29" stroke="#29312F" strokeWidth="3"/>
+                    </svg>
+                    <svg width="94" height="119" viewBox="0 0 94 119" fill="none" xmlns="http://www.w3.org/2000/svg"> <g filter="url(#filter0_d)"> <path d="M7.5 58.9999L32.5 98.9999C42.8333 62.1665 68.3 -7.60012 87.5 7.99988" stroke="#38AD67" strokeWidth="10"/> </g> <defs> <filter id="filter0_d" x="0.26001" y="0.76123" width="93.393" height="117.485" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB"> <feFlood floodOpacity="0" result="BackgroundImageFix"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/> <feOffset dy="4"/> <feGaussianBlur stdDeviation="1.5"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0"/> <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/> <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/> </filter> </defs> </svg>
+                    </>
+
+
+                }
+
+                {
+                    props.icon==="menu-big-strike" &&
+                        <>
+                    <svg viewBox="0 0 143 143" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="71.5" cy="71.5" r="66" fill="#10FFE2" stroke="#278EA5" strokeWidth="11"/>
+                        <path d="M55.4214 55.9463L47.8227 48.3477M40.224 40.749L47.8227 48.3477M47.8227 48.3477L55.4214 40.749L40.224 55.9463" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="36" y="37" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M104.041 55.9463L96.4423 48.3477M88.8436 40.749L96.4423 48.3477M96.4423 48.3477L104.041 40.749L88.8436 55.9463" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="84.6195" y="37" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M79.3453 102.251L71.7466 94.6524M64.148 87.0537L71.7466 94.6524M71.7466 94.6524L79.3453 87.0537L64.148 102.251" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="59.9239" y="83.3042" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M104.041 102.251L96.4423 94.6524M88.8436 87.0537L96.4423 94.6524M96.4423 94.6524L104.041 87.0537L88.8436 102.251" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="84.6195" y="83.3042" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M55.4214 102.251L47.8227 94.6524M40.224 87.0537L47.8227 94.6524M47.8227 94.6524L55.4214 87.0537L40.224 102.251" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="36" y="83.3042" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M104.041 79.0987L96.4423 71.5M88.8436 63.9014L96.4423 71.5M96.4423 71.5L104.041 63.9014L88.8436 79.0987" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="84.6195" y="60.1523" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M79.3453 55.9463L71.7466 48.3477M64.148 40.749L71.7466 48.3477M71.7466 48.3477L79.3453 40.749L64.148 55.9463" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="59.9239" y="37" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M55.4214 79.0987L47.8227 71.5M40.224 63.9014L47.8227 71.5M47.8227 71.5L55.4214 63.9014L40.224 79.0987" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="36" y="60.1523" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                        <path d="M79.3453 79.0987L71.7466 71.5M64.148 63.9014L71.7466 71.5M71.7466 71.5L79.3453 63.9014L64.148 79.0987" stroke="#A51C2D" strokeWidth="2"/>
+                        <rect opacity="0.85" x="59.9239" y="60.1523" width="22.6957" height="22.6957" stroke="#29312F" strokeWidth="2"/>
+                    </svg>
+                            <svg width="94" height="119" viewBox="0 0 94 119" fill="none" xmlns="http://www.w3.org/2000/svg"> <g filter="url(#filter0_d)"> <path d="M7.5 58.9999L32.5 98.9999C42.8333 62.1665 68.3 -7.60012 87.5 7.99988" stroke="#38AD67" strokeWidth="10"/> </g> <defs> <filter id="filter0_d" x="0.26001" y="0.76123" width="93.393" height="117.485" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB"> <feFlood floodOpacity="0" result="BackgroundImageFix"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/> <feOffset dy="4"/> <feGaussianBlur stdDeviation="1.5"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0"/> <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/> <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/> </filter> </defs> </svg>
+                    </>
+
 
                 }
             </button>
