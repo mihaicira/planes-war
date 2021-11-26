@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+import {Link} from "react-router-dom";
 import './bigButton.css';
 
 class BigButton extends Component{
@@ -9,7 +10,19 @@ class BigButton extends Component{
 
     render() {
         return(<>
-            <button className="bigButton" onClick={this.props.event}>{this.props.text}</button>
+            {
+                this.props.link &&
+                <Link to={`/planes-war/${this.props.link}`}>
+                    <button className="bigButton">{this.props.text}</button>
+                </Link>
+            }
+
+            {
+                this.props.event &&
+                    <button className="bigButton" onClick={()=>{this.props.event()}}>{this.props.text}</button>
+            }
+
+
         </>)
     }
 }

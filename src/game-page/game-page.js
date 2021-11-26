@@ -74,7 +74,7 @@ const UIStatusList = [
 const LETTERS = "ABCDEFGHIJKLMNOPRSTUVWXYZ"
 
 class GamePage extends Component{
-    roomId = window.location.hash.split("gameroom")[1];
+    roomId = this.props.match.params.id
     roomConfig = null
     whoAmI = "N/A"
     database = firebase.database()
@@ -107,18 +107,11 @@ class GamePage extends Component{
             legend: true
         }
     }
-    /*canvas
-    * 0 - liber
-    * 1 - corp
-    * 2 - cap
-    * 3 - ratat
-    * 4 - corp lovit
-    * 5 - cap lovit
-    * */
 
+
+    //first called
     componentDidMount() {
         this.raiseSetupPage();
-
         document.body.style.paddingBottom = "0";
     }
 
@@ -134,6 +127,7 @@ class GamePage extends Component{
         this.setState(State)
     }
 
+    //second called
     raiseSetupPage(){
         this.getGameStatus();
         this.getRoomConfig();
@@ -233,7 +227,6 @@ class GamePage extends Component{
                         State.enemyCanvas[i].push(0)
                     }
                 }
-
 
                 this.setState(State)
 
@@ -674,7 +667,7 @@ class GamePage extends Component{
         //prepare log for DB
         const log = {
             type: "plane-set",
-            log:[this.whoAmI,(remainingFleet[0] + remainingFleet[1] + remainingFleet[2])]
+            log:[this.whoAmI,(remainingFleet.reduce((a,b)=>a+b,0))]
         }
 
         //send log
@@ -684,7 +677,10 @@ class GamePage extends Component{
                 var logs = snapshot.val() === "" ? [] : snapshot.val()
                 logs.push(log)
 
+                console.log(`val: ${snapshot.val()}, logs size: ${logs.length}, single log: ${log.log}`)
+
                 updates[`rooms/${this.roomId}/game/logs`] = logs;
+
                 this.database.ref().update(updates);
             })
 
@@ -838,14 +834,15 @@ class GamePage extends Component{
     }
 
     changePlaneSize(newSize){
-        try{
+        if(document.querySelector("#menu-plane-1>button>svg:nth-of-type(2)"))
             document.querySelector("#menu-plane-1>button>svg:nth-of-type(2)").style.opacity = "0";
+
+        if(document.querySelector("#menu-plane-2>button>svg:nth-of-type(2)"))
             document.querySelector("#menu-plane-2>button>svg:nth-of-type(2)").style.opacity = "0";
+
+        if(document.querySelector("#menu-plane-3>button>svg:nth-of-type(2)"))
             document.querySelector("#menu-plane-3>button>svg:nth-of-type(2)").style.opacity = "0";
-        }
-        catch{
-            //pass
-        }
+
 
         var State = this.state
 
@@ -940,7 +937,7 @@ class GamePage extends Component{
     beginGame(){
         let State = this.state
         State.gameHasStarted = true;
-
+        
         this.database.ref(`rooms/${this.roomId}/game/currentTurn`).on('value',(snapshot)=>{
             let State = this.state
             State.isMyTurnNow = (snapshot.val() == this.whoAmI ? true : false)
@@ -961,7 +958,6 @@ class GamePage extends Component{
                 if(strikePackage.from !== this.whoAmI)
                     strikePackage.strikes.forEach((strike)=>{
                         if(State.setupCanvas[strike[0]][strike[1]] !== this.rules(State.setupCanvas[strike[0]][strike[1]])){
-                            console.log("update on my canvas square: ",strike)
                             State.setupCanvas[strike[0]][strike[1]] = this.rules(State.setupCanvas[strike[0]][strike[1]])
                             document.getElementById(`my-canvas-square/${strike[0]}-${strike[1]}`).innerHTML = this.getSquareSvg(strike[0],strike[1],true).svg
                         }
@@ -1067,7 +1063,6 @@ class GamePage extends Component{
                 envelope.svg =  "err"
                 break;
         }
-        console.log("envelope: ",envelope)
         return envelope
     }
 
@@ -1092,6 +1087,13 @@ class GamePage extends Component{
     }
 
     rules(id){
+        /*canvas rules
+        * 0 - liber
+        * 1 - corp
+        * 2 - cap
+        * 3 - ratat
+        * 4 - lovit
+        * */
         if(id === 0) return 3; // lovit => lovit
         if(id === 1) return 4;// corp => corp lovit
         if(id === 2) return 5;// cap => cap lovit
@@ -1113,17 +1115,19 @@ class GamePage extends Component{
             //change svg
             document.getElementById(`enemy-canvas-square/${square[0]}-${square[1]}`).innerHTML = this.getSquareSvg(square[0],square[1],false).svg
         })
+    }
 
+    didIWin(){
+        //returns true if i won, false otherwise
+        return false
     }
 
     confirmStrike(){
-        let updates = {}
-        updates[`rooms/${this.roomId}/game/currentTurn`] = this.whoAmI === 1 ? 2 : 1;
-        this.database.ref().update(updates);
-
         let State = this.state
 
+        console.log(this.didIWin())
 
+        //canvas graphic
         this.hitEnemy(State.selectedStrikeSquares)
 
         let strike = {
@@ -1131,6 +1135,7 @@ class GamePage extends Component{
             strikes: State.selectedStrikeSquares
         }
 
+        //strike history
         this.database.ref(`rooms/${this.roomId}/game/strikesHistory`).once('value')
             .then((snapshot)=>{
                 let strikes = snapshot.val() === null ? [] : snapshot.val()
@@ -1146,7 +1151,7 @@ class GamePage extends Component{
             log:[this.whoAmI,State.selectedStrikeSquares]
         }
         //send log
-        updates = {}
+        let updates = {}
         this.database.ref(`rooms/${this.roomId}/game/logs`).once('value')
             .then((snapshot)=>{
                 var logs = snapshot.val() === "" ? [] : snapshot.val()
@@ -1155,6 +1160,9 @@ class GamePage extends Component{
                 this.database.ref().update(updates);
             })
 
+        updates = {}
+        updates[`rooms/${this.roomId}/game/currentTurn`] = this.whoAmI === 1 ? 2 : 1;
+        this.database.ref().update(updates);
 
         this.setState(State)
     }
@@ -1240,21 +1248,21 @@ class GamePage extends Component{
         var updates = {}
 
         updates[`rooms/${this.roomId}`] = {
-            chat:"",
-            config:{
-                attacks: [1,1],
-                canvasSize: 10,
-                chat: true,
-                fleet:[1,0,0],
-                numberOfAirplanes: 1
+            "chat" : "",
+            "config" : {
+                "attacks" : [ 0, 0 ],
+                "canvasSize" : 10,
+                "chat" : true,
+                "fleet" : [1,0,0],
+                "numberOfAirplanes" : 1
             },
-            game:{
-                currentTurn: "1",
-                createdAt: "4/5/2021-14:20:148",
-                strikesHistory:[],
-                gameStatus: 101,
-                logs: "",
-                planePositions:"",
+            "game" : {
+                "currentTurn":"1",
+                "createdAt" : "3/10/2021-17:13:31:400",
+                "strikesHistory":[],
+                "gameStatus" : 101,
+                "logs" : "",
+                "planePositions" : ""
             }
         };
         this.database.ref().update(updates);

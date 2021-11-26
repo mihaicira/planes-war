@@ -9,11 +9,15 @@ class MainPage extends Component{
         super(props);
     }
 
+    componentDidMount() {
+        console.log(this.props.match)
+    }
+
     render() {
         return(<>
             <section id="page-1">
                 <Parallax/>
-                <BigButton text="Configure room" event={()=>{this.props.changePage(2)}}/>
+                <BigButton text="Configure room" link="config/"/>
                 <Perks/>
                 <Rules/>
             </section>
